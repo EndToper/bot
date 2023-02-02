@@ -4,7 +4,8 @@ import random as r
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher.filters import Text
 from sql import Database
-
+import os
+import config
 
 
 
@@ -12,11 +13,11 @@ from sql import Database
 import texts
 
 
-API_TOKEN = '6184666539:AAHBWOSpJs9bv41qw-1dL9EBXjQ4In-E8FE'
 
 
 
-bot = Bot(token=API_TOKEN)
+
+bot = Bot(token=os.environ.get("TOKEN"))
 dp = Dispatcher(bot)
 
 
@@ -50,8 +51,19 @@ async def send_random_value(call: types.CallbackQuery):
 @dp.message_handler()
 async def echo(message: types.Message):
     await message.answer(message.text)'''
+@dp.message_handler(commands=['p','profile','stat','s','statistic'])
+async def profile(message: types.Message):
+    await Database.create()
+    res = await Database().fetchone(f"SELECT * FROM players_stat WHERE telegram_id={message.from_user.id}")
+    print(res)
+    if res is None:
+        await message.reply("Профиль доступен только приключенцам. "
+                            "Вам нужно прибыть на континент Инврис для просмотра профиля."
+                            "(напишите /start или /go)")
+    else:
+        await message.reply(f"Приключенченское имя: {res[2]}\nКласс: {res[3]}\nОпыт")
 
-@dp.message_handler(commands=['start','s','go'])
+@dp.message_handler(commands=['start','go'])
 async def create_player(message: types.Message):
     await Database.create()
     chars =[]
@@ -68,7 +80,7 @@ async def create_player(message: types.Message):
     if res is None:
         await message.answer(texts.start)
         await Database().exec_and_commit(
-            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", parameters=param)
+            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", parameters=param)
     else:
         await message.answer("Вы уже отправились в приключение!")
     print(await Database().fetchone(f"SELECT * FROM players_stat WHERE telegram_id={message.from_user.id}"))

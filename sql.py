@@ -20,7 +20,7 @@ class Database:
 
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_stat "
-            "(id int primary key, telegram_id int, nick text, class text,level int, body int, intellect int, dexterity int, wisdom int,"
+            "(id int primary key, telegram_id int, nick text, class text, level int, body int, intellect int, dexterity int, wisdom int,"
             " fire int, water int, electro int, element int, space int)"
         )
         await db.commit()
