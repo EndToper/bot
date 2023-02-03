@@ -6,11 +6,11 @@ import os
 import config
 from classes import GameClass, Enemy
 
-classless = GameClass('Бесклассовый', 0, 0, 0, 0, 0, 0, 0, 0, [0])
-mage = GameClass('Маг', 1, 1, 1.05, 1.05, 1.05, 1.1, 1, 1.05, [3])
-warrior = GameClass('Воин', 1.1, 1, 1, 1, 1, 1, 1, 1, [1])
-archer = GameClass('Лучник', 1.1, 1.1, 1, 1, 1, 1, 1, 1, [2])
-warlock = GameClass('Колдун', 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 1.15, 0.85, [4])
+classless = GameClass('Бесклассовый', 0, 0, 0, 0, 0, 0, 0, 0, [0],'classless')
+mage = GameClass('Маг', 1, 1, 1.05, 1.05, 1.05, 1.1, 1, 1.05, [3],'mage')
+warrior = GameClass('Воин', 1.1, 1, 1, 1, 1, 1, 1, 1, [1],'warrior')
+archer = GameClass('Лучник', 1.1, 1.1, 1, 1, 1, 1, 1, 1, [2],'archer')
+warlock = GameClass('Колдун', 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 1.15, 0.85, [4],'warlock')
 
 classes_by_name = {'classless': classless, 'mage': mage, 'warrior': warrior, 'archer': archer, 'warlock': warlock}
 available_slots = ['Броня','Главное_оружие','Второе_оружие','Украшение']
@@ -134,10 +134,11 @@ async def profile(message: types.Message):
     else:
         await message.reply(
             f"Приключенченское имя: {res[2]}\nКласс: {classes_by_name[res[3]].name}\nХиты здоровья:{res[4]}\n"
-            f"Опыт: {res[5]} единиц\n<b>Характеристики</b>:\nТелосложение: <b>{res[6]}</b> Ловкость: <b>{res[7]}</b>\n"
-            f"Интеллект: <b>{res[8]}</b> Мудрость\харизма: <b>{res[9]}</b>\n<b>Родство с магией</b>:\n"
-            f"Огонь: <b>{res[10]}</b> Вода(лед): <b>{res[11]}</b>\nМолния: <b>{res[12]}</b> Пространство: <b>{res[14]}</b>\n"
-            f"<b><i>Бонус элементарной магии:</i></b> <b>+{res[13]}</b>\nДля просмотра инвентаря - /inventory", parse_mode="html")
+            f"Уровень: {res[5]} ({res[6]}/{(int(res[5])+1)*100} единиц)\n<b>Характеристики</b>:\n"
+            f"Телосложение: <b>{res[7]}</b> Ловкость: <b>{res[8]}</b>\n"
+            f"Интеллект: <b>{res[9]}</b> Мудрость\харизма: <b>{res[10]}</b>\n<b>Родство с магией</b>:\n"
+            f"Огонь: <b>{res[11]}</b> Вода(лед): <b>{res[12]}</b>\nМолния: <b>{res[13]}</b> Пространство: <b>{res[15]}</b>\n"
+            f"<b><i>Бонус элементарной магии:</i></b> <b>+{res[14]}</b>\nДля просмотра инвентаря - /inventory", parse_mode="html")
 
 
 @dp.message_handler(commands=['start', 'go'])
@@ -148,7 +149,7 @@ async def create_player(message: types.Message):
         chars.append(r.randint(1, 8))
     for i in range(3):
         chars.append(round(r.random() * 1.5, 2))
-    param = (message.from_user.id, message.from_user.username, 'classless', chars[0]*10, 0, chars[0], chars[1], chars[2],
+    param = (message.from_user.id, message.from_user.username, 'classless', chars[0]*5, 0, 0, chars[0], chars[1], chars[2],
              chars[3], chars[4], chars[5], chars[6], round(r.random() * 0.2, 2),
              round(r.random() * 0.75, 2))
     param2 = (message.from_user.id,chars[0]+2,"Пусто",chars[0],"Пусто","Пусто","Пусто","Пусто")
@@ -158,7 +159,7 @@ async def create_player(message: types.Message):
     if res is None:
         await message.answer(texts.start)
         await Database().exec_and_commit(
-            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", parameters=param)
+            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", parameters=param)
         await Database().exec_and_commit(
             sql="INSERT INTO players_inventory VALUES(?, ?, ?, ?, ?, ?, ?, ?)", parameters=param2)
         await profile(message)
