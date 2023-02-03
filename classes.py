@@ -20,3 +20,14 @@ class GameClass:
         self.heal = heal_bonus
         self.name = name
         self.ability_number = ability_number
+
+
+class Enemy:
+    def __init__(self,name, hp, dex, physical_damage, fire_damage, water_damage, electro_damage):
+        self.name = name
+        self.hp = hp
+        self.dex = dex
+        self.phys_dam = physical_damage
+        self.fire_dam = fire_damage
+        self.wat_dam = water_damage
+        self.el_dam = electro_damage
