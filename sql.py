@@ -20,15 +20,15 @@ class Database:
 
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_stat "
-            "(id int primary key, telegram_id int, nick text, class text, hp int, level int, exp level, body int, intellect int, dexterity int, wisdom int,"
+            "(id int primary key, telegram_id int, nick text, location text, class text, hp int, level int, exp level, body int, intellect int, dexterity int, wisdom int,"
             " fire int, water int, electro int, element int, space int)"
         )
         await db.commit()
 
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_inventory "
-            "(telegram_id int, inventory_size int, inventory text, last_body int, equip_armor text, equip_weapon text,"
-            " equip_weapon2 text, equip_jewellery text)"
+            "(telegram_id int, inventory_size int, inventory text, money int, last_body int, equip_armor text, equip_weapon text,"
+            " equip_weapon2 text, equip_jewellery text, magic_spell1 text, magic_spell2 text, magic_spell3 text)"
         )
         await db.commit()
 

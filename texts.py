@@ -34,3 +34,11 @@ change_class = '''Внимательно посмотрите на ваши фи
 Начальное снаряжение:\n
 Железный меч с проклятьем(1/6 проклятого урона)\n
 Проклеенный кожей доспех(+8 хп)\n'''
+
+
+async def loc_text(location):
+        loc = f'''Вы пришли на локацию {location}.\nВыберите, куда вы хотите пойти:'''
+        return loc
+
+async def loc_text_2(location,location2):
+        return f'''Вы пришли в локацию {location}.\nВы пошли в локацию {location2}'''
