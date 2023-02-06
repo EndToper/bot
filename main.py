@@ -28,7 +28,8 @@ available_magic_slots = ['1', '2', '3']
 monsters_from_loc = {'Лес': ['goblin', 'wolf', 'leshii'], 'Перелески': ['goblin', 'wolf', 'leshii'],
                      "Луг":['parasite','poison-slime','flower-fairy'], "Озеро":['nakki','morgena','mermaid'],
                      "Цветочный луг":['flower-fairy','mandragora','flower-fairy-king'],
-                     "Побережье":['long-necked-sea-serpent','gigantic_octopus','gorgona'],
+                     "Побережье":['long-necked-sea-serpent','gigantic-octopus','gorgona'],
+                     "Скалистое побережье":['long-necked-sea-serpent','gigantic-octopus','gorgona'],
                      "Темный лес":['naga','shadow','raven-mockingbird'],
                      "Скалы":['stonlem','salamandra','anchimayen'],
                      "Инврисовый лес":['dryad','envrisent','elder-envrisent'],
@@ -224,7 +225,7 @@ async def attack(call: types.CallbackQuery):
         f' урона {", ".join(damages)}\nВам нанесено {monster_damage} урона {", ".join(mon_damages)}')
     if 'heal' in weapon.damage_type:
         hp = hp + 2*round(magic_damage) + 1 if hp + 2*round(magic_damage) + 1 < max_hp else max_hp
-        await call.message.answer(f'Вы восстановили {round(magic_damage) + 1} хитов')
+        await call.message.answer(f'Вы восстановили {2*round(magic_damage) + 1} хитов')
     await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                          f" WHERE telegram_id = ?",
                                      parameters=(hp, call.message.chat.id))
