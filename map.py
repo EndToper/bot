@@ -8,7 +8,7 @@ class Location:
 
 paths_level = {'path': 0, 'lake': 5, 'meadow': 0, 'town': 0, 'forest': 0, 'meadow2': 0, 'meadow3': 0, 'forest2': 0,
                'forest3': 0,'forest4': 0, 'path2': 10, 'flower-meadow': 10, 'path3': 0, 'path4': 0, 'path5': 0,
-               'path6': 0,'path7': 0, 'envris-forest': 50, 'seaside': 15, 'seaside2': 5, 'seaside-town': 15,
+               'path6': 0,'path7': 0, 'envris-forest': 50, 'seaside': 15, 'seaside2': 15, 'seaside-town': 15,
                'rocks': 30, 'dark-forest': 20,'dark-forest2': 20, 'dark-envris-forest': 50, 'portal':0, 'portal2':100}
 
 locations = [Location('town', ['path'], 'Торговый город', ['Тропинка к городу']),
@@ -27,7 +27,7 @@ locations = [Location('town', ['path'], 'Торговый город', ['Тро�
              Location('path2',['meadow','lake','flower-meadow'],'Тропинка к цветочному лугу',['Луг','Озеро','Цветочный луг']),
              Location('meadow',['forest','path','path2','path3'],'Луг',['Лес','Тропинка к городу',
                                                                         'Тропинка к цветочному лугу','Тропинка к скалам']),
-             Location('forest',['dark-forest','path1','meadow','path4','dark-forest2'],'Лес',['Темный лес','Тропинка к городу',
+             Location('forest',['dark-forest','path','meadow','path4','dark-forest2'],'Лес',['Темный лес','Тропинка к городу',
                                                                                               'Луг','Тропинка к морю','Темный лес']),
              Location('dark-forest',['dark-envris-forest','dark-forest2','forest'],'Темный лес',['Темный инврисовый лес',
                                                                                                  'Темный лес','Лес']),
