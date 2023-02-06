@@ -14,7 +14,7 @@ paths_level = {'path': 0, 'lake': 5, 'meadow': 0, 'town': 0, 'forest': 0, 'meado
 locations = [Location('town', ['path'], 'Торговый город', ['Тропинка к городу']),
              Location('path', ['lake', 'meadow', 'town', 'forest'], 'Тропинка к городу',
                       ['Озеро', 'Луг', 'Торговый город', 'Лес']),
-             Location('lake', ['meadow2', 'meadow3', 'path', 'path2'], 'Озере', ['Луг', 'Луг', 'Тропинка к городу',
+             Location('lake', ['meadow2', 'meadow3', 'path', 'path2'], 'Озеро', ['Луг', 'Луг', 'Тропинка к городу',
                                                                                  'Тропинка к цветочному лугу']),
              Location('meadow2', ['path6', 'lake'], 'Луг', ['Тропинка', 'Озеро']),
              Location('path6', ['forest3', 'meadow2'], 'Тропинка', ['Лес', 'Луг']),

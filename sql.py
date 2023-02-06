@@ -33,6 +33,12 @@ class Database:
         )
         await db.commit()
 
+        await db.execute(
+            "CREATE TABLE IF NOT EXISTS players_status "
+            "(telegram_id int, in_fight bool)"
+        )
+        await db.commit()
+
         cls._db = db
         cls._instance = super(Database, cls).__new__(cls)
 

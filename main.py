@@ -26,13 +26,30 @@ slots_name_to_column = {"Броня": "equip_armor", "Главное_оружи�
                         "Украшение": "equip_jewellery"}
 available_magic_slots = ['1', '2', '3']
 monsters_from_loc = {'Лес': ['goblin', 'wolf', 'leshii'], 'Перелески': ['goblin', 'wolf', 'leshii'],
-                     "Луг":['parasite','poison-slime','flower-king'], "Озеро":['nakki','morgena','mermaid'],
+                     "Луг":['parasite','poison-slime','flower-fairy'], "Озеро":['nakki','morgena','mermaid'],
                      "Цветочный луг":['flower-fairy','mandragora','flower-fairy-king'],
                      "Побережье":['long-necked-sea-serpent','gigantic_octopus','gorgona'],
                      "Темный лес":['naga','shadow','raven-mockingbird'],
                      "Скалы":['stonlem','salamandra','anchimayen'],
                      "Инврисовый лес":['dryad','envrisent','elder-envrisent'],
                      "Темный инврисовый лес":['raven-mockingbird','distortion-envrisent','used-distortion-envrisent']}
+monsters = ['Гоблин','Волк','Леший','Травяной паразит','Ядовитая слизь','Дух цветов',
+            'Накки','Морге́на','Русалка','Мандрагора','Король духов цветов',
+            'Длинношеий морской змей','Гигантский осьминог','Медуза Горгона',
+            'Воин наги','Тень','Ворон-пересмешник','Камнелем',
+            'Саламандра','Анчимайен, мальчик-шаровая-молния',
+            'Древесный живой инврис','Инврисэнт',
+            'Древний инврисэнт','Искаженный инврисэнт',
+            'Сросшиеся искаженные инврисэнты']
+number_by_name = {'Гоблин':0,'Волк':1,'Леший':2,'Травяной паразит':3,'Ядовитая слизь':4,'Дух цветов':5,
+            'Накки':6,'Морге́на':7,'Русалка':8,'Мандрагора':9,'Король духов цветов':10,
+            'Длинношеий морской змей':11,'Гигантский осьминог':12,'Медуза Горгона':13,
+            'Воин наги':14,'Тень':15,'Ворон-пересмешник':16,'Камнелем':17,
+            'Саламандра':18,'Анчимайен, мальчик-шаровая-молния':19,
+            'Древесный живой инврис':20,'Инврисэнт':21,
+            'Древний инврисэнт':22,'Искаженный инврисэнт':23,
+            'Сросшиеся искаженные инврисэнты':24}
+
 
 name_damage = {'fire': 'огнем', 'phys': 'физической силой', 'water': 'водой', 'ice': 'льдом', 'electro': 'молнией',
                'space': 'пространством', 'curse': 'проклятьем', 'poison': 'ядом', 'heal': '', 'melee': ''}
@@ -106,16 +123,16 @@ async def fight(message: types.Message, monster):
                 inv.append((elem3))
     for i in range(len(result)):
         keyboard.add(types.InlineKeyboardButton(text=result[i],
-                                                callback_data=f"attack_{result[i]}_{inv[i].type_char}_{monster.name}_{monster.hp}"))
-    await message.answer("Выберите способ атаки", reply_markup=keyboard)
+                                                callback_data=f"att_{result[i]}_{inv[i].type_char}_{number_by_name[monster.name]}_{monster.hp}"))
+    await message.answer(text='Выберите способ атаки', reply_markup=keyboard)
 
 
-@dp.callback_query_handler(text_startswith="attack_")
+@dp.callback_query_handler(text_startswith="att_")
 async def attack(call: types.CallbackQuery):
     await Database.create()
     attack = call.data.split("_")[1]
     char_type = call.data.split("_")[2]
-    m_name = call.data.split("_")[3]
+    m_name = monsters[int(call.data.split("_")[3])]
     m_hp = call.data.split("_")[4]
     await call.message.edit_text(f'Вы атакавали, используя {attack}')
     monster = None
@@ -127,7 +144,6 @@ async def attack(call: types.CallbackQuery):
     chars = await Database().fetchone(
         f"SELECT body, dexterity, intellect, wisdom FROM players_stat WHERE telegram_id={call.message.chat.id}")
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
-    print(chars)
     magic_affinity = await Database().fetchone(
         f"SELECT fire, water, electro, element, space FROM players_stat WHERE telegram_id={call.message.chat.id}")
     bonus = {'fire': float(magic_affinity[0]), 'water': float(magic_affinity[1]), 'electro': float(magic_affinity[2]),
@@ -145,13 +161,12 @@ async def attack(call: types.CallbackQuery):
             if attack == elem.name:
                 weapon = elem
         weapon_damage = 0
-        for i in range(2 * weapon.count if r.randint(1, 10) == 1 and classes_by_name[
-            pl_class].type == 'archer' else weapon.count):
+        for i in range(2 * weapon.count if r.randint(1, 10) == 1 and pl_class.type == 'archer' else weapon.count):
             weapon_damage += r.randint(1, weapon.dice)
         damage = weapon_damage
         damage += chars[0] / 2 if char_type == 'bod' else chars[1] / 2
         rw = r.randint(1, 1000)
-        damage = damage * 2 if rw <= 125 and classes_by_name[pl_class].type == 'warrior' else damage
+        damage = damage * 2 if rw <= 125 and pl_class.type == 'warrior' else damage
     elif char_type == 'int':
         for elem in spell:
             if attack == elem.name:
@@ -160,9 +175,9 @@ async def attack(call: types.CallbackQuery):
         for i in range(weapon.count):
             magic_damage += r.randint(1, chars[2])
         for elem in weapon.damage_type:
-            magic_damage = magic_damage * (
-                    bonus[elem] + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0) + (
-                0.1 if classes_by_name[pl_class].type == 'mage' else 0))
+            magic_damage = magic_damage * (bonus[elem]
+                                           + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
+                                           + (0.1 if pl_class.type == 'mage' else 0))
         damage = magic_damage if 'heal' not in weapon.damage_type else 0
     resistance = 1
     curse_dam = 0
@@ -180,16 +195,18 @@ async def attack(call: types.CallbackQuery):
     monster_damage = r.randint(1, monster.dam)
     for elem in monster.dam_type:
         if elem in ['fire', 'electro', 'ice', 'water', 'phys']:
-            monster_damage = monster_damage * monster.res[monster.dam_type]
+            monster_damage = monster_damage * monster.res[elem]
         elif elem == 'poison':
             monster_damage += monster.dex/monster.res['poison']
         elif elem == 'curse':
             monster_damage += round(monster.dex / 100 * max_hp)
     monster_damage = round(monster_damage)
     damages = []
-    print(monster_damage)
     for elem in weapon.damage_type:
         damages.append(name_damage[elem])
+    mon_damages = []
+    for elem in monster.dam_type:
+        mon_damages.append(name_damage[elem])
     rand = r.randint(1, 100)
     if chars[1] > monster.dex and 'melee' not in weapon.damage_type:
         if rand < 85:
@@ -201,14 +218,12 @@ async def attack(call: types.CallbackQuery):
         monster_damage = 0
     elif 50 > rand and round(chars[1] / monster.dex * 100) > 50 and 'melee' in weapon.damage_type:
         monster_damage = 0
-    print(monster_damage)
     hp -= monster_damage
     await call.message.answer(
         f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
-        f' урона {", ".join(damages)}\n Вам нанесено {monster_damage} урона {name_damage[monster.dam_type]}')
+        f' урона {", ".join(damages)}\nВам нанесено {monster_damage} урона {", ".join(mon_damages)}')
     if 'heal' in weapon.damage_type:
         hp = hp + 2*round(magic_damage) + 1 if hp + 2*round(magic_damage) + 1 < max_hp else max_hp
-        print(hp)
         await call.message.answer(f'Вы восстановили {round(magic_damage) + 1} хитов')
     await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                          f" WHERE telegram_id = ?",
@@ -223,33 +238,40 @@ async def attack(call: types.CallbackQuery):
             f"SELECT level, exp FROM players_stat WHERE telegram_id={call.message.chat.id}")
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
-                                         parameters=(round(max_hp / 2), call.message.chat.id))
+                                         parameters=(round(max_hp / 2) if hp < round(max_hp / 2) else hp, call.message.chat.id))
         level = int(levels[0])
         exp = int(levels[1])
         exp += monster.xp
-        if exp > (level + 1) * 100:
+
+        print('лвл монстра',monster.xp)
+        await Database().exec_and_commit(sql=f"UPDATE players_stat SET exp = ?"
+                                             f" WHERE telegram_id = ?",
+                                         parameters=(exp, call.message.chat.id))
+        if exp >= (level + 1) * 100:
             exp -= (level + 1) * 100
+            print(exp)
             level += 1
-            rint = r.randint(1, 4)
+            rint = r.randint(0, 3)
             count = r.randint(1, 3)
             chars[rint] += count
-            last_body = await Database().fetchone(
+            inv_chars = await Database().fetchone(
                 f"SELECT last_body, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
-            size = int(last_body[1])
-            last_body = int(last_body[0])
-            size = size + ((chars[0] - last_body) * 2 if chars[0] > last_body else size)
-            await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory_size = ?, last_body = ?"
-                                                 f" WHERE telegram_id = ?",
-                                             parameters=(size, chars[0], call.message.chat.id))
-            await call.message.answer(
-                f'Вы повысили уровень.\nХарактеристика {["Телосложение", "Ловкость", "Интеллект", "Харизма"][rint]} увеличена на {count}')
+            size = int(inv_chars[1])
+            last_body = int(inv_chars[0])
+            size = size + ((chars[0] - last_body) * 2 if chars[0] > last_body else 0)
+            await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory_size = ?, last_body = ? "
+                                                 f"WHERE telegram_id = ?",
+                                             parameters=(int(size), int(chars[0]), call.message.chat.id))
             await Database().exec_and_commit(
-                sql=f"UPDATE players_stat SET body = ?, dexterity = ?, intellect = ?, wisodm = ?,"
+                sql=f"UPDATE players_stat SET body = ?, dexterity = ?, intellect = ?, wisdom = ?"
                     f" WHERE telegram_id = ?",
                 parameters=(chars[0], chars[1], chars[2], chars[3], call.message.chat.id))
-        await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?, hp = ?, max_hp = ?"
-                                             f" WHERE telegram_id = ?",
-                                         parameters=(level, exp, hp + (chars[0] - last_body)*5,max_hp + (chars[0] - last_body)*5, call.message.chat.id))
+            await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?, hp = ?, max_hp = ?"
+                                                 f" WHERE telegram_id = ?",
+                                             parameters=(level, exp, hp + (chars[0] - last_body) * 5,
+                                                         max_hp + (chars[0] - last_body) * 5, call.message.chat.id))
+            await call.message.answer(
+                f'Вы повысили уровень.\nХарактеристика {["Телосложение", "Ловкость", "Интеллект", "Харизма"][rint]} увеличена на {count}')
         await Database().exec_and_commit(sql=f"UPDATE players_inventory SET money = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(money + 5, call.message.chat.id))
@@ -336,8 +358,8 @@ async def become_archer(call: types.CallbackQuery):
                                      parameters=('mage', call.from_user.id))
     await Database().exec_and_commit(sql="UPDATE players_inventory SET inventory = ? WHERE telegram_id = ?",
                                      parameters=('Кинжал/Кожаный доспех', call.from_user.id))
-    await call.answer("Вы успешно сменили свой класс на Мага!")
-    await call.message.edit_text(f"Вы выбрали класс Маг")
+    await call.answer("Вы успешно сменили свой класс на Инврисолога!")
+    await call.message.edit_text(f"Вы выбрали класс Инврисолог")
     await change_loc(call.message)
 
 
@@ -358,7 +380,7 @@ async def change_class(message: types.Message):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="Воин", callback_data="warrior"))
     keyboard.add(types.InlineKeyboardButton(text="Лучник", callback_data="archer"))
-    keyboard.add(types.InlineKeyboardButton(text="Маг", callback_data="mage"))
+    keyboard.add(types.InlineKeyboardButton(text="Инврисолог", callback_data="mage"))
     keyboard.add(types.InlineKeyboardButton(text="Колдун", callback_data="warlock"))
     await message.answer(texts.change_class, reply_markup=keyboard)
 
@@ -544,6 +566,36 @@ async def create_player(message: types.Message):
         await change_class(message)
     else:
         await message.answer("Вы уже отправились в приключение!")
+
+@dp.message_handler(commands=['town'])
+async def go_to(message: types.Message):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text="Да", callback_data="town"))
+    await message.answer('Пойти в город',reply_markup=keyboard)
+
+
+@dp.callback_query_handler(text="town")
+async def go_town(call: types.CallbackQuery):
+    await Database.create()
+    await Database().exec_and_commit(sql="UPDATE players_stat SET location = ? WHERE telegram_id = ?",
+                                     parameters=('town', call.from_user.id))
+    await call.answer("Таинственные силы изменеили ваше положение в пространстве!")
+    await call.message.edit_text(f"Вы ушли в город")
+    await change_loc(call.message)
+
+
+@dp.message_handler(commands=['delete'])
+async def delete_player(message: types.Message):
+    telegram_id = message.text.split(' ')[1]
+    if message.from_user.id in config.admins:
+        await Database().exec_and_commit(sql=f"DELETE FROM players_stat WHERE telegram_id = ?",
+                                         parameters=(telegram_id,))
+        await Database().exec_and_commit(sql=f"DELETE FROM players_inventory WHERE telegram_id = ?",
+                                         parameters=(telegram_id,))
+        await message.answer(f"Приключенец {'@'+telegram_id} испепелен")
+    else:
+        await message.answer("Ваш статус бога не подтвержден, чтобы распоряжется жизнями людей")
+
 
 
 if __name__ == '__main__':
