@@ -10,7 +10,8 @@ from aiogram.dispatcher.filters import Text
 from classes import GameClass, Enemy, basic_enemies
 from magic import spell
 from map import locations, paths_level
-from equip import armors, weapons, jewelleries, all_weapon_names, all_armor_names
+from equip import armors, weapons, jewelleries, all_weapon_names, all_armor_names, all_jewelery_names, all_equip
+
 
 classless = GameClass('Бесклассовый', 0, 0, 0, 0, 0, 0, 0, 0, [0], 'classless')
 mage = GameClass('Инврисолог', 1, 1, 1.05, 1.05, 1.05, 1.1, 1, 1.05, [3], 'mage')
@@ -20,8 +21,8 @@ warlock = GameClass('Колдун', 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 1.15, 0.
 
 classes_by_name = {'classless': classless, 'mage': mage, 'warrior': warrior, 'archer': archer, 'warlock': warlock}
 available_slots = ['Броня', 'Главное_оружие', 'Второе_оружие', 'Украшение']
-slots_to_massive = {'Броня': all_armor_names, 'Главное_оружие': all_weapon_names, 'Второе_оружие': all_weapon_names,
-                    'Украшение': jewelleries}
+slots_to_massive = {'equip_armor': all_armor_names, 'equip_weapon': all_weapon_names, 'equip_weapon2': all_weapon_names,
+                    "equip_jewellery": jewelleries}
 slots_name_to_column = {"Броня": "equip_armor", "Главное_оружие": "equip_weapon", "Второе_оружие": "equip_weapon2",
                         "Украшение": "equip_jewellery"}
 available_magic_slots = ['1', '2', '3']
@@ -76,13 +77,14 @@ async def change_loc(message: types.Message):
     for elem in locations:
         if elem.title == location:
             loc_obj = elem
+    keyboard = types.InlineKeyboardMarkup()
     if 'town' in location:
         hp = await Database().fetchone(f"SELECT max_hp FROM players_stat WHERE telegram_id={message.chat.id}")
         hp = hp[0]
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(hp, message.chat.id))
-    keyboard = types.InlineKeyboardMarkup()
+        keyboard.add(types.InlineKeyboardButton(text='Зайти в магазин', callback_data=f"shop_0"))
     for i in range(len(loc_obj.paths)):
         keyboard.add(types.InlineKeyboardButton(text=loc_obj.paths_name[i], callback_data=f"go_{loc_obj.paths[i]}"))
     text_loc = await texts.loc_text(loc_obj.name)
@@ -165,7 +167,7 @@ async def attack(call: types.CallbackQuery):
         for i in range(2 * weapon.count if r.randint(1, 10) == 1 and pl_class.type == 'archer' else weapon.count):
             weapon_damage += r.randint(1, weapon.dice)
         damage = weapon_damage
-        damage += chars[0] / 2 if char_type == 'bod' else chars[1] / 2
+        damage += chars[0] / 1.5 if char_type == 'bod' and pl_class.type == 'warrior' else chars[0] / 2 if char_type == 'bod' else chars[1]/ 1.5 if char_type == 'dex' and pl_class.type == 'archer' else chars[1] / 2
         rw = r.randint(1, 1000)
         damage = damage * 2 if rw <= 125 and pl_class.type == 'warrior' else damage
     elif char_type == 'int':
@@ -186,12 +188,11 @@ async def attack(call: types.CallbackQuery):
         resistance = resistance * monster.res[dt]
     damage = round(damage / resistance) if resistance > 0 else 0
     monster.hp -= damage
-    if weapon.damage_type == 'poison':
+    if 'poison' in weapon.damage_type:
         monster.hp -= chars[3]
-    if weapon.damage_type == 'curse':
-        curse_dam = chars[3] / 100 * max_hp if chars[3] < 50 else 0.5 * max_hp
-        curse_dam = curse_dam if curse_dam < 50 else 50
-        curse_dam = curse_dam if pl_class.type == 'warlock' else 10
+    if 'curse' in weapon.damage_type:
+        curse_dam = chars[3] / 100 * max_hp if chars[3] < 75 else 0.75 * max_hp
+        curse_dam = curse_dam if pl_class.type == 'warlock' else curse_dam/10
         monster.hp -= curse_dam
     monster_damage = r.randint(1, monster.dam)
     for elem in monster.dam_type:
@@ -235,6 +236,20 @@ async def attack(call: types.CallbackQuery):
         await fight(call.message, monster)
     if monster.hp <= 0:
         await call.message.answer(f'Вы победили монстра "{monster.name}"')
+        res = await Database().fetchone(f"SELECT inventory, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+        inv = res[0]
+        size = int(res[1])
+        count = len(inv.split('/'))
+        drop = ''
+        for elem in monster.drop.keys():
+            if r.randint(1,100) < monster.drop[elem] and count+1 < size:
+                drop = drop + "/" + elem
+                count+=1
+                await call.message.answer(f"Вы нашли {elem} в трупе монстра")
+        print(drop)
+        await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory = ?"
+                                             f" WHERE telegram_id = ?",
+                                         parameters=(inv+drop, call.message.chat.id))
         levels = await Database().fetchone(
             f"SELECT level, exp FROM players_stat WHERE telegram_id={call.message.chat.id}")
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
@@ -327,6 +342,62 @@ async def go(call: types.CallbackQuery):
     else:
         await call.answer(f"Для прохода в локацю {loc2.name} требуется {paths_level[loc2.title]} уровень")
 
+@dp.callback_query_handler(text_startswith="shop")
+async def shop(call: types.CallbackQuery):
+    await Database.create()
+    level = await Database().fetchone(
+        f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = int(level[0])
+    page = int(call.data.split("_")[1])
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text=f'Выйти',
+                                            callback_data=f"go_town"))
+    keyboard.add(types.InlineKeyboardButton(text=f'Следующая страница',
+                                            callback_data=f"shop_{page+1 if 5*page+5 < len(all_equip) else page}"))
+    from_num = 5*page if 5*page < len(all_equip)-1 else len(all_equip)-1
+    to_num = 5*page+5 if 5*page+5 < len(all_equip)-1 else len(all_equip)-1
+    for i in range(from_num,to_num):
+        if all_equip[i].cost > 0 and all_equip[i].level <= level:
+            keyboard.add(types.InlineKeyboardButton(text=f'{all_equip[i].name}, Стоимость: {all_equip[i].cost} медяков'
+                                                     , callback_data=f"buy_{all_equip[i].name}"))
+    keyboard.add(types.InlineKeyboardButton(text=f'Предыдущая страница',
+                                            callback_data=f"shop_{page-1 if page > 0 else 0}"))
+    await call.message.edit_text(f"Вы зашли в магазин. Чего изволите купить?",reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="buy")
+async def buy(call: types.CallbackQuery):
+    item = all_equip[0]
+    item2 = call.data.split("_")[1]
+    await Database.create()
+    inv = await Database().fetchone(f"SELECT money,inventory FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+    prof = await Database().fetchone(f"SELECT class FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    pl_class = classes_by_name[prof[0]]
+    money = int(inv[0])
+    invent = inv[1].split('/')
+    for elem in all_equip:
+        if elem.name == item2:
+            item = elem
+            print(item)
+    if item.cost < money and (item.req in invent or item.req is None) and (item.level <= 10 if pl_class.type != 'warrior'
+    and pl_class.type != 'archer' else True):
+        money -= item.cost
+        if item.req is not None:
+            for elem in item.req:
+                invent.remove(elem)
+        invent.append(item.name)
+        await Database().exec_and_commit(sql=f"UPDATE players_inventory SET money = ?, inventory= ?"
+                                             f" WHERE telegram_id = ?",
+                                         parameters=(money, '/'.join(invent), call.message.chat.id))
+        await call.message.reply(f"Куплен предмет {item.name}")
+    elif item.cost > money:
+        await call.message.reply(f"Недостаточно средств")
+    if pl_class.type != 'warrior' and pl_class.type != 'archer' and item.level > 10:
+        await call.message.reply(f"Вы не можете покупать профиссиональное снаряжение воинов и лучников")
+    else:
+        await call.message.reply(f"У вас нет необходимых материалов: {', '.join(item.req)}")
+    await call.answer()
+
+
 
 @dp.callback_query_handler(text="warrior")
 async def become_warrior(call: types.CallbackQuery):
@@ -408,9 +479,7 @@ async def inventory(message: types.Message):
             f"Главное оружие: {res[6]}\n"
             f"Второе оружие: {res[7]}\n"
             f"Украшения: {res[8]}\n"
-            f"Чтобы снарядить какую-либо вещь пропишите команду /equip <slot> <name>\n"
-            f"Например /equip Броня Кольчуга\n"
-            f"Чтоб снять предмет пропишите /equip <slot> Пусто")
+            f"Чтобы снарядить какую-либо вещь пропишите команду /equip")
 
 
 @dp.message_handler(commands=['ml', 'sl', 'magic_list', 'spells_list'])
@@ -468,50 +537,57 @@ async def magic(message: types.Message):
 
 @dp.message_handler(commands=['e', 'equip', 'equipment'])
 async def equip(message: types.Message):
-    await Database.create()
-    armor = None
-    text = message.text.split(" ")
-    print(text, len(text))
-    if len(text) < 3:
-        await message.reply("Неправильно введенная команда.\n Чтобы снарядить какую-либо вещь пропишите команду"
-                            " /equip <slot> <name>\nНапример /equip Броня Кольчуга\n")
-    else:
-        slot = text[1]
-        if slot not in available_slots:
-            await message.reply(
-                f"Выбран несуществующий слот. Выберите один из следующих слотов: {', '.join(available_slots)}")
-        else:
-            inv = await Database().fetchone(
-                f"SELECT inventory FROM players_inventory WHERE telegram_id={message.from_user.id}")
-            inv = inv[0].split("/")
-            equipment = ''
-            for i in range(2, len(text)):
-                equipment += text[i] + " "
-            equipment = equipment[0:len(equipment) - 1]
-            print(slots_to_massive[slot], equipment in slots_to_massive[slot])
-            if equipment in inv and equipment in slots_to_massive[slot] or equipment == "Пусто":
-                await Database().exec_and_commit(sql=f"UPDATE players_inventory SET {slots_name_to_column[slot]}"
-                                                     f" = ? WHERE telegram_id = ?",
-                                                 parameters=(equipment, message.from_user.id))
-                if slot == "Броня":
-                    for elem in armors:
-                        if elem.name == equipment:
-                            armor = elem
-                    res = await Database().fetchone(
-                        f"SELECT hp, max_hp, body FROM players_stat WHERE telegram_id={message.from_user.id}")
-                    hp = res[0]
-                    max_hp = res[1]
-                    body = res[2]
-                    dif = 5 * body + armor.defence - max_hp
-                    hp += dif
-                    await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?, max_hp = ?"
-                                                         f" WHERE telegram_id = ?",
-                                                     parameters=(hp, 5 * body + armor.defence, message.from_user.id))
-                await message.reply(f"Слот {slot} был изменен на {equipment}")
+    keyboard = types.InlineKeyboardMarkup()
+    for elem in available_slots:
+        keyboard.add(types.InlineKeyboardButton(text=f'{" ".join(elem.split("_"))}',
+                                            callback_data=f"eq1-{elem}"))
+    await message.answer("Выберите слот", reply_markup=keyboard)
 
-            else:
-                await message.reply(
-                    f"У вас нет предмета {equipment} в инвентаре или {equipment} нельзя надеть на слот {slot}")
+@dp.callback_query_handler(text_startswith="eq1")
+async def eq(call: types.CallbackQuery):
+    name = ''
+    await Database.create()
+    inv = await Database().fetchone(
+                f"SELECT inventory FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+    inv = inv[0].split("/")
+    keyboard = types.InlineKeyboardMarkup()
+    for i in range(len(inv)):
+        keyboard.add(types.InlineKeyboardButton(text=f'{inv[i]}',
+                                                    callback_data=f"eq2-{call.data.split('-')[1]}-{i}"))
+    await call.message.edit_text(f'Выбранный слот - {" ".join(call.data.split("-")[1].split("_"))}',reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="eq2")
+async def equiped(call: types.CallbackQuery):
+    armor = None
+    await Database.create()
+    slot = slots_name_to_column[call.data.split('-')[1]]
+    equipment = ''
+    inv = await Database().fetchone(
+        f"SELECT inventory FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+    inv = inv[0].split("/")
+    for i in range(len(inv)):
+        if i == int(call.data.split('-')[2]):
+            equipment = inv[i]
+    if equipment in slots_to_massive[slot] or equipment == "Пусто":
+        await Database().exec_and_commit(sql=f"UPDATE players_inventory SET {slot}"
+                                             f" = ? WHERE telegram_id = ?",
+                                         parameters=(equipment, call.message.chat.id))
+        if slot == "equip_armor":
+            for elem in armors:
+                if elem.name == equipment:
+                    armor = elem
+            res = await Database().fetchone(
+                f"SELECT hp, max_hp, body FROM players_stat WHERE telegram_id={call.message.chat.id}")
+            hp = res[0]
+            max_hp = res[1]
+            body = res[2]
+            dif = 5 * body + armor.defence - max_hp
+            hp += dif
+            await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?, max_hp = ?"
+                                                 f" WHERE telegram_id = ?",
+                                             parameters=(hp, 5 * body + armor.defence, call.message.chat.id))
+        await call.message.edit_text(f"Слот {call.data.split('-')[1]} был изменен на {equipment}")
+
 
 
 @dp.message_handler(commands=['p', 'profile', 'stat', 's', 'statistic'])
@@ -588,12 +664,16 @@ async def go_town(call: types.CallbackQuery):
 @dp.message_handler(commands=['delete'])
 async def delete_player(message: types.Message):
     telegram_id = message.text.split(' ')[1]
+    print(message.from_user.id)
+    await Database.create()
     if message.from_user.id in config.admins:
+        nick = await Database().fetchone(f"SELECT nick FROM players_stat WHERE telegram_id={telegram_id}")
+        nick = nick[0]
         await Database().exec_and_commit(sql=f"DELETE FROM players_stat WHERE telegram_id = ?",
                                          parameters=(telegram_id,))
         await Database().exec_and_commit(sql=f"DELETE FROM players_inventory WHERE telegram_id = ?",
                                          parameters=(telegram_id,))
-        await message.answer(f"Приключенец {'@'+telegram_id} испепелен")
+        await message.answer(f"Приключенец {'@'+nick} испепелен")
     else:
         await message.answer("Ваш статус бога не подтвержден, чтобы распоряжется жизнями людей")
 
