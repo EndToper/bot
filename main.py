@@ -265,7 +265,7 @@ async def attack(call: types.CallbackQuery):
         count = len(inv.split('/'))
         drop = ''
         for elem in monster.drop.keys():
-            if r.randint(1,100) < monster.drop[elem] and count+1 < size:
+            if r.randint(1,100) < monster.drop[elem] and count+1 <= size:
                 drop = drop + "/" + elem
                 count+=1
                 await call.message.answer(f"Вы нашли {elem} в трупе монстра")
