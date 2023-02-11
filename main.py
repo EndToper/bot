@@ -69,6 +69,28 @@ async def get_money(money):
     return f'{gold} золотых, {silver} серебряных, {bronze} медяков'
 
 
+async def perfor_enhanc(chars, rint, count, call, hp, max_hp, exp, level):
+    chars[rint] += count
+    inv_chars = await Database().fetchone(
+        f"SELECT last_body, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+    size = int(inv_chars[1])
+    last_body = int(inv_chars[0])
+    size = size + ((chars[0] - last_body) * 2 if chars[0] > last_body else 0)
+    await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory_size = ?, last_body = ? "
+                                         f"WHERE telegram_id = ?",
+                                     parameters=(int(size), int(chars[0]), call.message.chat.id))
+    await Database().exec_and_commit(
+        sql=f"UPDATE players_stat SET body = ?, dexterity = ?, intellect = ?, wisdom = ?"
+            f" WHERE telegram_id = ?",
+        parameters=(chars[0], chars[1], chars[2], chars[3], call.message.chat.id))
+    await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?, hp = ?, max_hp = ?"
+                                         f" WHERE telegram_id = ?",
+                                     parameters=(level, exp, hp + (chars[0] - last_body) * 5,
+                                                 max_hp + (chars[0] - last_body) * 5, call.message.chat.id))
+    await call.message.answer(
+        f'Вы повысили уровень.\nХарактеристика {["Телосложение", "Ловкость", "Интеллект", "Харизма"][rint]} увеличена на {count}')
+
+
 async def change_loc(message: types.Message):
     loc_obj = None
     await Database.create()
@@ -84,7 +106,7 @@ async def change_loc(message: types.Message):
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(hp, message.chat.id))
-        keyboard.add(types.InlineKeyboardButton(text='Зайти в магазин', callback_data=f"shop_0"))
+        keyboard.add(types.InlineKeyboardButton(text='Зайти в магазин', callback_data=f"gshop"))
     for i in range(len(loc_obj.paths)):
         keyboard.add(types.InlineKeyboardButton(text=loc_obj.paths_name[i], callback_data=f"go_{loc_obj.paths[i]}"))
     text_loc = await texts.loc_text(loc_obj.name)
@@ -176,7 +198,7 @@ async def attack(call: types.CallbackQuery):
                 weapon = elem
         magic_damage = 0
         for i in range(weapon.count):
-            magic_damage += r.randint(1, chars[2])
+            magic_damage += r.randint(1, round(chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
         for elem in weapon.damage_type:
             magic_damage = magic_damage * (bonus[elem]
                                            + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
@@ -193,6 +215,7 @@ async def attack(call: types.CallbackQuery):
     if 'curse' in weapon.damage_type:
         curse_dam = chars[3] / 100 * max_hp if chars[3] < 75 else 0.75 * max_hp
         curse_dam = curse_dam if pl_class.type == 'warlock' else curse_dam/10
+        curse_dam = round(curse_dam)
         monster.hp -= curse_dam
     monster_damage = r.randint(1, monster.dam)
     for elem in monster.dam_type:
@@ -225,8 +248,8 @@ async def attack(call: types.CallbackQuery):
         f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
         f' урона {", ".join(damages)}\nВам нанесено {monster_damage} урона {", ".join(mon_damages)}')
     if 'heal' in weapon.damage_type:
-        hp = hp + 2*round(magic_damage) + 1 if hp + 2*round(magic_damage) + 1 < max_hp else max_hp
-        await call.message.answer(f'Вы восстановили {2*round(magic_damage) + 1} хитов')
+        hp = hp + 4*round(magic_damage) + 1 if hp + 4*round(magic_damage) + 1 < max_hp else max_hp
+        await call.message.answer(f'Вы восстановили {4*round(magic_damage) + 1} хитов')
     await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                          f" WHERE telegram_id = ?",
                                      parameters=(hp, call.message.chat.id))
@@ -269,25 +292,20 @@ async def attack(call: types.CallbackQuery):
             level += 1
             rint = r.randint(0, 3)
             count = r.randint(1, 3)
-            chars[rint] += count
-            inv_chars = await Database().fetchone(
-                f"SELECT last_body, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
-            size = int(inv_chars[1])
-            last_body = int(inv_chars[0])
-            size = size + ((chars[0] - last_body) * 2 if chars[0] > last_body else 0)
-            await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory_size = ?, last_body = ? "
-                                                 f"WHERE telegram_id = ?",
-                                             parameters=(int(size), int(chars[0]), call.message.chat.id))
-            await Database().exec_and_commit(
-                sql=f"UPDATE players_stat SET body = ?, dexterity = ?, intellect = ?, wisdom = ?"
-                    f" WHERE telegram_id = ?",
-                parameters=(chars[0], chars[1], chars[2], chars[3], call.message.chat.id))
-            await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?, hp = ?, max_hp = ?"
-                                                 f" WHERE telegram_id = ?",
-                                             parameters=(level, exp, hp + (chars[0] - last_body) * 5,
-                                                         max_hp + (chars[0] - last_body) * 5, call.message.chat.id))
-            await call.message.answer(
-                f'Вы повысили уровень.\nХарактеристика {["Телосложение", "Ловкость", "Интеллект", "Харизма"][rint]} увеличена на {count}')
+            if level % 5 != 0:
+                await perfor_enhanc(chars,rint,count,call,hp,max_hp,exp,level)
+            else:
+                keyboard = types.InlineKeyboardMarkup()
+                keyboard.add(types.InlineKeyboardButton(text=f'Телосложение',
+                                                        callback_data=f"choose_char_0_{exp}"))
+                keyboard.add(types.InlineKeyboardButton(text=f'Ловкость',
+                                                        callback_data=f"choose_char_1_{exp}"))
+                keyboard.add(types.InlineKeyboardButton(text=f'Интеллект',
+                                                        callback_data=f"choose_char_2_{exp}"))
+                keyboard.add(types.InlineKeyboardButton(text=f'Мудрость/харизма',
+                                                        callback_data=f"choose_char_3_{exp}"))
+                await call.message.answer(f'Выберите характеристику, которую хотите повысить на 3',reply_markup=keyboard)
+
         await Database().exec_and_commit(sql=f"UPDATE players_inventory SET money = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(money + 5, call.message.chat.id))
@@ -310,6 +328,23 @@ async def attack(call: types.CallbackQuery):
                                              parameters=(call.message.chat.id,))
             await Database().exec_and_commit(sql=f"DELETE FROM players_inventory WHERE telegram_id = ?",
                                              parameters=(call.message.chat.id,))
+
+@dp.callback_query_handler(text_startswith="choose_char")
+async def choose_char(call: types.CallbackQuery):
+    await Database.create()
+    rint = int(call.data.split("_")[2])
+    chars = await Database().fetchone(
+        f"SELECT body, dexterity, intellect, wisdom FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
+    count = 3
+    stats = await Database().fetchone(
+        f"SELECT level, hp, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = int(stats[0])
+    hp = int(stats[1])
+    max_hp = int(stats[2])
+    exp = int(call.data.split("_")[3])
+    await perfor_enhanc(chars, rint, count, call, hp, max_hp, exp, level+1)
+    await call.message.edit_text(f"""Вы повысили {'Телосложение' if rint == 0 else ('Ловкость' if rint == 1 else ('Интеллект' if rint == 2 else "Мудрость/харизма"))} на 3""")
 
 
 @dp.callback_query_handler(text_startswith="go_")
@@ -342,27 +377,39 @@ async def go(call: types.CallbackQuery):
     else:
         await call.answer(f"Для прохода в локацю {loc2.name} требуется {paths_level[loc2.title]} уровень")
 
-@dp.callback_query_handler(text_startswith="shop")
+@dp.callback_query_handler(text_startswith="gshop")
+async def shop(call: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text=f'Ассортимент',
+                                            callback_data=f"shopb_0"))
+    keyboard.add(types.InlineKeyboardButton(text=f'Продажа',
+                                            callback_data=f"sell_0"))
+    await call.message.edit_text(f"Вы зашли в магазин. Вы будете продовать или покупать?", reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="shopb")
 async def shop(call: types.CallbackQuery):
     await Database.create()
     level = await Database().fetchone(
         f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
     level = int(level[0])
     page = int(call.data.split("_")[1])
+    all_availabe_equip = [item if item.level <= level and item.cost > 0 else None for item in all_equip]
+    all_availabe_equip = [item for item in all_availabe_equip if item is not None]
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text=f'Выйти',
                                             callback_data=f"go_town"))
-    keyboard.add(types.InlineKeyboardButton(text=f'Следующая страница',
-                                            callback_data=f"shop_{page+1 if 5*page+5 < len(all_equip) else page}"))
-    from_num = 5*page if 5*page < len(all_equip)-1 else len(all_equip)-1
-    to_num = 5*page+5 if 5*page+5 < len(all_equip)-1 else len(all_equip)-1
+    if 5 * page + 5 < len(all_availabe_equip):
+        keyboard.add(types.InlineKeyboardButton(text=f'Следующая страница ->',
+                                            callback_data=f"shopb_{page+1}"))
+    from_num = 5*page if 5*page < len(all_availabe_equip)-1 else len(all_availabe_equip)-1
+    to_num = 5*page+5 if 5*page+5 < len(all_availabe_equip)-1 else len(all_availabe_equip)-1
     for i in range(from_num,to_num):
-        if all_equip[i].cost > 0 and all_equip[i].level <= level:
-            keyboard.add(types.InlineKeyboardButton(text=f'{all_equip[i].name}, Стоимость: {all_equip[i].cost} медяков'
-                                                     , callback_data=f"buy_{all_equip[i].name}"))
-    keyboard.add(types.InlineKeyboardButton(text=f'Предыдущая страница',
-                                            callback_data=f"shop_{page-1 if page > 0 else 0}"))
-    await call.message.edit_text(f"Вы зашли в магазин. Чего изволите купить?",reply_markup=keyboard)
+        keyboard.add(types.InlineKeyboardButton(text=f'{all_availabe_equip[i].name}, Стоимость: {all_availabe_equip[i].cost} медяков'
+                                                     , callback_data=f"buy_{all_availabe_equip[i].name}"))
+    if page > 0:
+        keyboard.add(types.InlineKeyboardButton(text=f'<- Предыдущая страница',
+                                            callback_data=f"shopb_{page-1}"))
+    await call.message.edit_text(f"Чего изволите купить?",reply_markup=keyboard)
 
 @dp.callback_query_handler(text_startswith="buy")
 async def buy(call: types.CallbackQuery):
@@ -390,7 +437,7 @@ async def buy(call: types.CallbackQuery):
                                          parameters=(money, '/'.join(invent), call.message.chat.id))
         await call.message.reply(f"Куплен предмет {item.name}")
     elif item.cost > money:
-        await call.message.reply(f"Недостаточно средств")
+        await call.message.reply(f"Недостаточно средств\nТребуется {item.cost} медяков, накопите еще {item.cost-money} медяков")
     if pl_class.type != 'warrior' and pl_class.type != 'archer' and item.level > 10:
         await call.message.reply(f"Вы не можете покупать профиссиональное снаряжение воинов и лучников")
     else:
@@ -606,7 +653,7 @@ async def profile(message: types.Message):
             f"Приключенченское имя: {res[2]}\nКласс: {classes_by_name[res[4]].name}\nХиты здоровья:  {res[5]}/{res[6]}\n"
             f"Уровень: {res[7]} ({res[8]}/{(int(res[7]) + 1) * 100} единиц)\n<b>Характеристики</b>:\n"
             f"Телосложение: <b>{res[9]}</b> Ловкость: <b>{res[10]}</b>\n"
-            f"Интеллект: <b>{res[11]}</b> Мудрость\харизма: <b>{res[12]}</b>\n<b>Родство с магией</b>:\n"
+            f"Интеллект: <b>{res[11]}</b> Мудрость/харизма: <b>{res[12]}</b>\n<b>Родство с магией</b>:\n"
             f"Огонь: <b>{res[13]}</b> Вода(лед): <b>{res[14]}</b>\nМолния: <b>{res[15]}</b> Пространство: <b>{res[17]}</b>\n"
             f"<b><i>Бонус элементарной магии:</i></b> <b>+{res[16]}</b>\nДля просмотра инвентаря - /inventory",
             parse_mode="html")

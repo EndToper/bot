@@ -9,7 +9,7 @@ class Equip:
         self.type_char = type_char
         self.nerf_dex = nerf_dex
         self.cost = round((dice * 2 + count * 10)*(level+1)/nerf_dex) if hp == 0 else (round((hp*4)*(level+1)*5/nerf_dex)
-        if round((hp*4)*(level+1)*5/nerf_dex) < 1500 else round((hp*4)*(level+1)/nerf_dex))
+        if round((hp*4)*(level+1)*5/nerf_dex) < 1500 else round((hp*4)*level/nerf_dex))
         self.req = material
 
 class Jewellery:
@@ -31,12 +31,12 @@ weapons = [Equip(0, ['phys', 'melee'], 1, 12,'Старый меч',0,'bod',1,Non
            Equip(0, ['phys', 'melee'], 1, 30, 'Хороший стальной меч', 5, 'bod', 1.5, None),
            Equip(0, ['phys'], 1, 40, 'Арболет', 5, 'dex', 3, None),
            Equip(0, ['phys', 'melee'], 2, 30, 'Легкий стальной меч', 10, 'bod', 1, None),
-           Equip(0, ['phys', 'melee'], 2, 60, 'Алебарда', 10, 'bod', 2, None),
-           Equip(0, ['phys', 'fire'], 3, 30, 'Механическая винтовка', 10, 'dex', 1, None),
+           Equip(0, ['phys', 'melee'], 2, 60, 'Алебарда', 10, 'bod', 2, ['Желтый инврис']),
+           Equip(0, ['phys', 'fire'], 3, 30, 'Механическая винтовка', 10, 'dex', 1, ['Желтый инврис','Ядро']),
            Equip(0, ['phys', 'melee','poison'], 4, 30, 'Ядовитый меч', 15, 'bod', 1, ['Ядовитый инврис']),
            Equip(0, ['phys', 'melee','fire'], 4, 30, 'Огненный меч', 15, 'bod', 1, ['Огненный инврис']),
            Equip(0, ['phys', 'melee','electro'], 6, 30, 'Магический меч', 25, 'bod', 1, ['Электрический инврис']),
-           Equip(0, ['phys', 'melee','poison','fire','electro',], 8, 30, 'Инврисэнтовый меч', 50, 'bod', 1, ['Ядовитый инврис','Огненный инврис','Электрический инврис']),
+           Equip(0, ['phys', 'melee','poison','fire','electro','space'], 8, 30, 'Инврисэнтовый меч', 50, 'bod', 1, ['Ядовитый инврис','Огненный инврис','Электрический инврис']),
            Equip(0, ['phys', 'melee','space'], 8, 30, 'Пространственный меч', 50, 'bod', 1, ['Пространственный инврис','Пространственный инврис']),
            Equip(0, ['phys', 'melee','curse'], 4, 30, 'Проклятый меч', 25, 'bod', 1, ["Проклятый инврис"]),
            Equip(0, ['phys', 'melee','poison'], 6, 30, 'Сильно ядовитый меч', 35, 'bod', 1, "Проклятый ядовитый инврис"),
