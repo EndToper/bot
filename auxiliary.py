@@ -138,16 +138,15 @@ async def fight(message: types.Message, monster):
                 inv.append((elem3))
     for i in range(len(result)):
         keyboard.add(types.InlineKeyboardButton(text=result[i],
-                                                callback_data=f"att_{result[i]}_{inv[i].type_char}_{number_by_name[monster.name]}_{monster.hp}"))
+                                                callback_data=f"att_{result[i]}_{number_by_name[monster.name]}_{monster.hp}"))
     await message.answer(text='Выберите способ атаки', reply_markup=keyboard)
 
 
 async def attack(call: types.CallbackQuery):
     await Database.create()
     attack = call.data.split("_")[1]
-    char_type = call.data.split("_")[2]
-    m_name = monsters[int(call.data.split("_")[3])]
-    m_hp = call.data.split("_")[4]
+    m_name = monsters[int(call.data.split("_")[2])]
+    m_hp = call.data.split("_")[3]
     await call.message.edit_text(f'Вы атакавали, используя {attack}')
     monster = None
     for elem in basic_enemies.values():
@@ -155,6 +154,12 @@ async def attack(call: types.CallbackQuery):
             monster = Enemy(elem.name, int(m_hp), elem.dex, elem.dam, elem.dam_type, elem.res, elem.drop, elem.xp,
                             elem.boss)
     weapon = None
+    for elem2 in weapons:
+        if attack == elem2.name:
+            weapon = elem2
+    for elem3 in spell:
+        if attack == elem3.name:
+            weapon = elem3
     chars = await Database().fetchone(
         f"SELECT body, dexterity, intellect, wisdom FROM players_stat WHERE telegram_id={call.message.chat.id}")
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
@@ -170,21 +175,15 @@ async def attack(call: types.CallbackQuery):
     max_hp = result[1]
     pl_class = classes_by_name[result[2]]
     damage = 0
-    if char_type == 'bod' or char_type == 'dex':
-        for elem in weapons:
-            if attack == elem.name:
-                weapon = elem
+    if 'bod' in weapon.type_char or 'dex' in weapon.type_char:
         weapon_damage = 0
         for i in range(2 * weapon.count if r.randint(1, 10) == 1 and pl_class.type == 'archer' else weapon.count):
             weapon_damage += r.randint(1, weapon.dice)
         damage = weapon_damage
-        damage += chars[0] / 1.5 if char_type == 'bod' and pl_class.type == 'warrior' else chars[0] / 2 if char_type == 'bod' else chars[1]/ 1.5 if char_type == 'dex' and pl_class.type == 'archer' else chars[1] / 2
+        damage += chars[0] / 1.5 if 'bod' in weapon.type_char and pl_class.type == 'warrior' else chars[0] / 2 if 'bod' in weapon.type_char else chars[1]/ 1.5 if 'dex' in weapon.type_char and pl_class.type == 'archer' else chars[1] / 2
         rw = r.randint(1, 1000)
         damage = damage * 2 if rw <= 125 and pl_class.type == 'warrior' else damage
-    elif char_type == 'int':
-        for elem in spell:
-            if attack == elem.name:
-                weapon = elem
+    elif 'int' in weapon.type_char:
         magic_damage = 0
         for i in range(weapon.count):
             magic_damage += r.randint(1, round(chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
@@ -222,15 +221,16 @@ async def attack(call: types.CallbackQuery):
     for elem in monster.dam_type:
         mon_damages.append(name_damage[elem])
     rand = r.randint(1, 100)
-    if chars[1] > monster.dex and 'melee' not in weapon.damage_type:
+    dex = chars[1] / weapon.nerf_dex if weapon.type_char != 'int' else chars[1]
+    if dex > monster.dex and 'melee' not in weapon.damage_type:
         if rand < 85:
             monster_damage = 0
-    elif round(chars[1] / monster.dex * 100 if chars[1] / monster.dex * 100 <= 80 else 80) > rand and 'melee' not in weapon.damage_type:
+    elif round(dex / monster.dex * 100 if dex / monster.dex * 100 <= 80 else 80) > rand and 'melee' not in weapon.damage_type:
         monster_damage = 0
-    elif round(chars[1] / monster.dex * 100) > rand and 'melee' in weapon.damage_type and round(
+    elif round(dex / monster.dex * 100) > rand and 'melee' in weapon.damage_type and round(
             chars[1] / monster.dex * 100) < 50:
         monster_damage = 0
-    elif 50 > rand and round(chars[1] / monster.dex * 100) > 50 and 'melee' in weapon.damage_type:
+    elif 50 > rand and round(dex / monster.dex * 100) > 50 and 'melee' in weapon.damage_type:
         monster_damage = 0
     hp -= monster_damage
     await call.message.answer(

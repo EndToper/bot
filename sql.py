@@ -16,7 +16,7 @@ class Database:
         :return: None
         """
 
-        db = await aiosqlite.connect("envris.db")
+        db = await aiosqlite.connect("envris.db", timeout=10)
 
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_stat "

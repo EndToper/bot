@@ -13,6 +13,7 @@ from equip import armors, weapons, all_equip
 from auxiliary import change_loc, create_monster, get_money, perfor_enhanc, classes_by_name, available_slots, \
     slots_to_massive, slots_name_to_column, available_magic_slots, number_by_name, attack as att2, fight
 from classes import drop_cost
+from collections import Counter
 
 
 
@@ -207,11 +208,15 @@ async def buy(call: types.CallbackQuery):
         if elem.name == item2:
             item = elem
             print(item)
-    if item.cost < money and (item.req in invent or item.req is None) and (item.level <= 10 if pl_class.type != 'warrior'
+    needs_count = Counter(item.req)
+    inv_count = Counter(invent)
+    if item.cost < money and (len([True for elem in needs_count.keys() if needs_count[elem] <= inv_count[elem]]) == len(needs_count)
+                              or item.req is None) and (item.level <= 10 if pl_class.type != 'warrior'
     and pl_class.type != 'archer' else True) and size+1 <= max_size:
         money -= item.cost
         if item.req is not None:
             for elem in item.req:
+                print(elem, invent)
                 invent.remove(elem)
         invent.append(item.name)
         await Database().exec_and_commit(sql=f"UPDATE players_inventory SET money = ?, inventory= ?"
@@ -224,8 +229,8 @@ async def buy(call: types.CallbackQuery):
         await call.message.reply(f"Вы не можете покупать профиссиональное снаряжение воинов и лучников")
     if size + 1 > max_size:
         await call.message.reply(f"Недостаточно места в инвентаре")
-    else:
-        await call.message.reply(f"У вас нет необходимых материалов: {', '.join(item.req)}")
+    if len([True for elem in needs_count.keys() if needs_count[elem] <= inv_count[elem]]) != len(needs_count) or item.req is not None:
+        await call.message.reply(f"У вас нет необходимых материалов: {', '.join(item.req) if type(item.req) is list else item.req}")
     await call.answer()
 
 
