@@ -9,7 +9,7 @@ class Location:
 paths_level = {'path': 0, 'lake': 5, 'meadow': 0, 'town': 0, 'forest': 0, 'meadow2': 0, 'meadow3': 0, 'forest2': 0,
                'forest3': 0,'forest4': 0, 'path2': 10, 'flower-meadow': 10, 'path3': 0, 'path4': 0, 'path5': 0,
                'path6': 0,'path7': 0, 'envris-forest': 50, 'seaside': 15, 'seaside2': 15, 'seaside-town': 15,
-               'rocks': 30, 'dark-forest': 20,'dark-forest2': 20, 'dark-envris-forest': 50, 'portal':0, 'portal2':100}
+               'rocks': 30, 'dark-forest': 20,'dark-forest2': 20, 'dark-envris-forest': 60, 'portal':0, 'portal2':100}
 
 locations = [Location('town', ['path'], 'Торговый город', ['Тропинка к городу']),
              Location('path', ['lake', 'meadow', 'town', 'forest'], 'Тропинка к городу',

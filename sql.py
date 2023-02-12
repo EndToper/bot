@@ -20,7 +20,7 @@ class Database:
 
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_stat "
-            "(id int primary key, telegram_id int, nick text, location text, class text, hp int, max_hp int,"
+            "(id integer primary key autoincrement, telegram_id int, nick text, location text, class text, hp int, max_hp int,"
             " level int, exp level, body int, dexterity int, intellect int, wisdom int,"
             " fire int, water int, electro int, element int, space int)"
         )
@@ -36,6 +36,12 @@ class Database:
         await db.execute(
             "CREATE TABLE IF NOT EXISTS players_status "
             "(telegram_id int, in_fight bool)"
+        )
+        await db.commit()
+
+        await db.execute(
+            "CREATE TABLE IF NOT EXISTS party "
+            "(chat_id int, members text, location text, party_level int, party_top int)"
         )
         await db.commit()
 

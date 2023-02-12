@@ -43,6 +43,8 @@ weapons = [Equip(0, ['phys', 'melee'], 1, 12,'Старый меч',0,'bod',1,Non
            Equip(0, ['phys', 'melee','ice'], 6, 30, 'Ледяной меч', 25, 'bod', 1, ["Ледяной инврис"]),
            Equip(0, ['phys'],0,0,'Пусто',0,'bod',1,None)]
 
+weapons += []
+
 armors = [Equip(10, ['air'], 0, 0,'Кольчуга',0,'bod',1,None),
          Equip(8, ['air'], 0, 0,'Проклеенный кожей доспех',0,'bod',1, None),
          Equip(6, ['air'], 0, 0, 'Кожаный доспех',0,'bod',1,None),
