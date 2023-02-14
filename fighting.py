@@ -69,6 +69,9 @@ async def attack(call: types.CallbackQuery):
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
     magic_affinity = await Database().fetchone(
         f"SELECT fire, water, electro, element, space FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = await Database().fetchone(
+        f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = int(level[0])
     bonus = {'fire': float(magic_affinity[0]), 'water': float(magic_affinity[1]), 'electro': float(magic_affinity[2]),
              'space': float(magic_affinity[3]), 'ice': float(magic_affinity[1]), 'heal': 1, 'curse': 1,
              'poison': 1, 'melee': 1}
@@ -90,12 +93,21 @@ async def attack(call: types.CallbackQuery):
     elif 'int' in weapon.type_char:
         magic_damage = 0
         for i in range(weapon.count):
-            magic_damage += r.randint(1, round(chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
+            intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
+            intel = int(intel) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else int(chars[2])
+            print(intel)
+            magic_damage += r.randint(1, intel)
+            print(magic_damage)
         for elem in weapon.damage_type:
             magic_damage = magic_damage * (bonus[elem]
                                            + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
-                                           + (0.1 if pl_class.type == 'mage' else 0))
+                                           + (0.1 if pl_class.type == 'mage' else 0)
+                                           + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else 0)
+                                           - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or weapon.damage_type != ['space','melee'] else 0))
         damage = magic_damage if 'heal' not in weapon.damage_type else 0
+    print(damage)
+    damage = damage * (0.5+level/(10+level)) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else damage
+    print(damage)
     resistance = 1
     curse_dam = 0
     for dt in weapon.damage_type:
@@ -141,8 +153,8 @@ async def attack(call: types.CallbackQuery):
         f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
         f' урона {", ".join(damages)}\nВам нанесено {monster_damage} урона {", ".join(mon_damages)}')
     if 'heal' in weapon.damage_type:
-        hp = hp + 4*round(magic_damage) + 1 if hp + 4*round(magic_damage) + 1 < max_hp else max_hp
-        await call.message.answer(f'Вы восстановили {4*round(magic_damage) + 1} хитов')
+        hp = hp + 2*round(magic_damage) + 1 if hp + 2*round(magic_damage) + 1 < max_hp else max_hp
+        await call.message.answer(f'Вы восстановили {2*round(magic_damage) + 1} хитов')
     await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                          f" WHERE telegram_id = ?",
                                      parameters=(hp, call.message.chat.id))
@@ -166,13 +178,12 @@ async def attack(call: types.CallbackQuery):
         await Database().exec_and_commit(sql=f"UPDATE players_inventory SET inventory = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(inv+drop, call.message.chat.id))
-        levels = await Database().fetchone(
-            f"SELECT level, exp FROM players_stat WHERE telegram_id={call.message.chat.id}")
+        exp = await Database().fetchone(
+            f"SELECT  exp FROM players_stat WHERE telegram_id={call.message.chat.id}")
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(round(max_hp / 2) if hp < round(max_hp / 2) else hp, call.message.chat.id))
-        level = int(levels[0])
-        exp = int(levels[1])
+        exp = int(exp[0])
         exp += monster.xp
 
         print('лвл монстра',monster.xp)
