@@ -10,8 +10,9 @@ from classes import GameClass, Enemy, basic_enemies
 from magic import spell
 from map import locations, paths_level
 from equip import armors, weapons, all_equip
-from auxiliary import change_loc, create_monster, get_money, perfor_enhanc, classes_by_name, available_slots, \
-    slots_to_massive, slots_name_to_column, available_magic_slots, number_by_name, attack as att2, fight
+from auxiliary import change_loc, get_money, perfor_enhanc, classes_by_name, available_slots, \
+    slots_to_massive, slots_name_to_column, available_magic_slots, number_by_name
+from fighting import create_monster, attack as att2, fight
 from classes import drop_cost
 from collections import Counter
 
@@ -326,49 +327,39 @@ async def magic_list(message: types.Message):
     await message.reply(f'Заклинания:\nПервый слот: {res[0]}\nВторой слот: {res[1]}\nТретий слот: {res[2]}')
 
 
-@dp.message_handler(commands=['mc', 'mag_chan', 'magic', 'magic_change'])
-async def magic(message: types.Message):
+@dp.message_handler(commands=['mc', 'magic', 'magic_change'])
+async def magic_change(message: types.Message):
+    keyboard = types.InlineKeyboardMarkup()
+    for elem in [1,2,3]:
+        keyboard.add(types.InlineKeyboardButton(text=f'Магический слот {elem}',
+                                            callback_data=f"mc1_{elem}"))
+    await message.answer("Выберите слот", reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="mc1")
+async def mc(call: types.CallbackQuery):
     await Database.create()
-    text = message.text.split(" ")
-    if len(text) < 3:
-        await message.reply("Неправильно введенная команда.\n Чтобы подготовить для боя магию пропишите команду"
-                            " /magic <slot> <name>\nНапример /magic 1 Огненный шар\n")
-    else:
-        slot = text[1]
-        if slot not in available_magic_slots:
-            await message.reply(
-                f"Выбран несуществующий слот. Выберите один из следующих слотов: {', '.join(available_magic_slots)}")
-        else:
-            slot = int(slot) - 1
-            available_spell = []
-            level = await Database().fetchone(
-                f"SELECT level FROM players_stat WHERE telegram_id={message.from_user.id}")
-            level = int(level[0])
-            pl_class = await Database().fetchone(
-                f"SELECT class FROM players_stat WHERE telegram_id={message.from_user.id}")
-            pl_class = pl_class[0]
-            pl_class = classes_by_name[pl_class]
-            for elem in spell:
-                if elem.level <= level and pl_class.type == 'mage':
-                    available_spell.append(elem)
-                elif elem.level <= level and elem.level <= 15:
-                    available_spell.append(elem)
-            available_spell_name = []
-            for elem in available_spell:
-                available_spell_name.append(elem.name)
-            magic_spell = ''
-            for i in range(2, len(text)):
-                magic_spell += text[i] + " "
-            magic_spell = magic_spell[0:len(magic_spell) - 1]
-            print(magic_spell, available_spell)
-            if magic_spell in available_spell_name:
-                await Database().exec_and_commit(sql=f"UPDATE players_inventory SET {'magic_spell' + str(slot + 1)}"
-                                                     f" = ? WHERE telegram_id = ?",
-                                                 parameters=(magic_spell, message.from_user.id))
-                await message.reply(f"Слот {slot + 1} был изменен на {magic_spell}")
-            else:
-                await message.reply(
-                    f"""Вы не выучили заклинание "{magic_spell}".\nСписок доступных заклинаний: {', '.join(available_spell_name)}""")
+    level = await Database().fetchone(
+                f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = level[0]
+    pl_class = await Database().fetchone(
+        f"SELECT class FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    pl_class = pl_class[0]
+    pl_class = classes_by_name[pl_class]
+    keyboard = types.InlineKeyboardMarkup()
+    for i in range(len(spell)):
+        if (spell[i].level <= level and pl_class.type == 'mage') or (spell[i].level <= level and spell[i].level <= 15):
+            keyboard.add(types.InlineKeyboardButton(text=f'{spell[i].name}',
+                                                    callback_data=f"mc2_{call.data.split('_')[1]}_{i}"))
+    await call.message.edit_text(f'Выбранный магический слот - {call.data.split("_")[1]}',reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="mc2")
+async def mc2(call: types.CallbackQuery):
+    slot, magic_spell = call.data.split("_")[1], spell[int(call.data.split("_")[2])].name
+    await Database.create()
+    await Database().exec_and_commit(sql=f"UPDATE players_inventory SET {'magic_spell' + slot}"
+                                         f" = ? WHERE telegram_id = ?",
+                                     parameters=(magic_spell, call.message.chat.id))
+    await call.message.edit_text(f"Слот {slot} был изменен на {magic_spell}")
 
 
 @dp.message_handler(commands=['e', 'equip', 'equipment'])
