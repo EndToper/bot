@@ -133,7 +133,7 @@ async def attack(call: types.CallbackQuery):
         elif elem == 'poison':
             monster_damage += monster.dex/monster.res['poison']
         elif elem == 'curse':
-            monster_damage += round(monster.dex / 80 * max_hp)
+            monster_damage += round(monster.dex / 200 * max_hp)
     monster_damage = round(monster_damage)
     damages = []
     for elem in weapon.damage_type:
