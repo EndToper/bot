@@ -6,6 +6,10 @@ import random as r
 from auxiliary import monsters, monsters_from_loc, number_by_name, classes_by_name, name_damage,perfor_enhanc,change_loc
 from equip import weapons
 
+assets = {}
+for key in basic_enemies.keys():
+    assets[key] = types.InputFile(f"./assets/{key}.png")
+
 
 async def create_monster(loc):
     monsters = monsters_from_loc[loc.name]
@@ -28,7 +32,11 @@ async def create_monster(loc):
 async def fight(message: types.Message, monster):
     await Database.create()
     res = await Database().fetchone(f"SELECT hp, max_hp FROM players_stat WHERE telegram_id={message.chat.id}")
-    await message.answer(f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}")
+    monster_title = ''
+    for key in basic_enemies.keys():
+        if monster.name == basic_enemies[key].name:
+            monster_title = key
+    await message.answer_photo(protect_content=True,photo=assets[monster_title],caption=f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}")
     result = await Database().fetchone(
         f"SELECT equip_weapon, equip_weapon2, magic_spell1, magic_spell2, magic_spell3 FROM players_inventory WHERE telegram_id={message.chat.id}")
     keyboard = types.InlineKeyboardMarkup()
@@ -66,6 +74,7 @@ async def attack(call: types.CallbackQuery):
             weapon = elem3
     chars = await Database().fetchone(
         f"SELECT body, dexterity, intellect, wisdom FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    print(chars)
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
     magic_affinity = await Database().fetchone(
         f"SELECT fire, water, electro, element, space FROM players_stat WHERE telegram_id={call.message.chat.id}")
