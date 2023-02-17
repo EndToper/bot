@@ -6,9 +6,7 @@ import random as r
 from auxiliary import monsters, monsters_from_loc, number_by_name, classes_by_name, name_damage,perfor_enhanc,change_loc
 from equip import weapons
 
-assets = {}
-for key in basic_enemies.keys():
-    assets[key] = types.InputFile(f"./assets/{key}.png")
+
 
 
 async def create_monster(loc):
@@ -36,7 +34,7 @@ async def fight(message: types.Message, monster):
     for key in basic_enemies.keys():
         if monster.name == basic_enemies[key].name:
             monster_title = key
-    await message.answer_photo(protect_content=True,photo=assets[monster_title],caption=f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}")
+    await message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{monster_title}.png"),caption=f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}")
     result = await Database().fetchone(
         f"SELECT equip_weapon, equip_weapon2, magic_spell1, magic_spell2, magic_spell3 FROM players_inventory WHERE telegram_id={message.chat.id}")
     keyboard = types.InlineKeyboardMarkup()
