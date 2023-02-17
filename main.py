@@ -452,7 +452,7 @@ async def create_player(message: types.Message):
         chars[0],
         chars[1], chars[2],
         chars[3], chars[4], chars[5], chars[6], round(r.random() * 0.2, 2),
-        round(r.random() * 0.8, 2),'null')
+        round(r.random() * 0.8, 2))
     param2 = (
         message.from_user.id, chars[0] + 2, "Пусто", 100, chars[0], "Пусто", "Пусто", "Пусто", "Пусто", "Огненный шар",
         "Быстрая молния", "Низшее исцеление")
@@ -462,7 +462,7 @@ async def create_player(message: types.Message):
     if res is None:
         await message.answer(texts.start)
         await Database().exec_and_commit(
-            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            sql="INSERT INTO players_stat VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             parameters=param)
         await Database().exec_and_commit(
             sql="INSERT INTO players_inventory VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", parameters=param2)
