@@ -81,9 +81,9 @@ async def attack(call: types.CallbackQuery):
         f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
     level = int(level[0])
     bonus = {'fire': float(magic_affinity[0]), 'water': float(magic_affinity[1]), 'electro': float(magic_affinity[2]),
-             'space': float(magic_affinity[3]), 'ice': float(magic_affinity[1]), 'heal': 1, 'curse': 1,
+             'space': float(magic_affinity[4]), 'ice': float(magic_affinity[1]), 'heal': 1, 'curse': 1,
              'poison': 1, 'melee': 1}
-    element = float(magic_affinity[2])
+    element = float(magic_affinity[3])
     result = await Database().fetchone(
         f"SELECT hp, max_hp, class FROM players_stat WHERE telegram_id={call.message.chat.id}")
     hp = result[0]
@@ -102,17 +102,14 @@ async def attack(call: types.CallbackQuery):
         magic_damage = 0
         if magic_count+weapon.cast_cost <= chars[2]:
             for i in range(weapon.count):
-                intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
+                intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2]))
                 intel = int(intel) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else int(chars[2])
-                print(intel)
-                magic_damage += r.randint(1, intel)
+                magic_damage += r.randint(1, chars[2])
                 print(magic_damage)
             for elem in weapon.damage_type:
-                magic_damage = magic_damage * (bonus[elem]
-                                               + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
-                                               + (0.1 if pl_class.type == 'mage' else 0)
-                                               + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else 0)
-                                               - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or weapon.damage_type != ['space','melee'] else 0))
+                mod = (bonus[elem] + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0) + (0.1 if pl_class.type == 'mage' else 0) + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space', 'melee'] else 0) - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or elem == 'space' and weapon.damage_type != ['space','melee'] else 0))
+                magic_damage = magic_damage * mod
+                print(mod,bonus[elem])
             damage = magic_damage if 'heal' not in weapon.damage_type else 0
         else:
             await call.message.edit_text("Вы слишком устали для использования этого заклинания")
@@ -166,8 +163,8 @@ async def attack(call: types.CallbackQuery):
             f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
             f' урона {", ".join(damages)}\n{"Вам нанесено "+ str(monster_damage) + " урона " + ", ".join(mon_damages) if monster_damage> 0 else "Вы уклонились от атаки."}')
         if 'heal' in weapon.damage_type:
-            hp = hp + 3*round(magic_damage) + 1 if hp + 3*round(magic_damage) + 1 < max_hp else max_hp
-            await call.message.answer(f'Вы восстановили {3*round(magic_damage) + 1} хитов')
+            await call.message.answer(f'Вы восстановили {round(magic_damage/1.2) + 1 if hp + round(magic_damage/1.2) + 1 < max_hp else max_hp - hp} хитов')
+            hp = hp + round(magic_damage / 1.2) + 1 if hp + round(magic_damage / 1.2) + 1 < max_hp else max_hp
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(hp, call.message.chat.id))
