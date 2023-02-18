@@ -5,8 +5,9 @@ class MagicType:
         self.title = title
         self.name = name
         self.level = level
-        self.cost = cast_cost
+        self.cast_cost = cast_cost
         self.type_char = type_char
+        self.cost = 0
 
 spell = [MagicType(['fire'],1,'fireball','Огненный шар',0, 0,'int'),
          MagicType(['water'],1,"watershot",'Водный выстрел',0, 0,'int'),

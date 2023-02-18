@@ -481,12 +481,17 @@ async def go_to(message: types.Message):
 @dp.callback_query_handler(text="town")
 async def go_town(call: types.CallbackQuery):
     await Database.create()
-    await Database().exec_and_commit(sql="UPDATE players_stat SET location = ? WHERE telegram_id = ?",
-                                     parameters=('town', call.from_user.id))
-    await call.answer("Таинственные силы изменеили ваше положение в пространстве!")
-    await call.message.edit_text(f"Вы ушли в город")
-    await change_loc(call.message)
-
+    money = await Database().fetchone(f"SELECT money FROM players_inventory WHERE telegram_id={call.from_user.id}")
+    if money[0] >= 75:
+        await Database().exec_and_commit(sql="UPDATE players_stat SET location = ? WHERE telegram_id = ?",
+                                         parameters=('town', call.from_user.id))
+        await Database().exec_and_commit(sql="UPDATE players_inventory SET money = ? WHERE telegram_id = ?",
+                                         parameters=(money[0]-75, call.from_user.id))
+        await call.answer("Таинственные силы изменеили ваше положение в пространстве!")
+        await call.message.edit_text(f"Вы ушли в город")
+        await change_loc(call.message)
+    else:
+        await call.message.edit_text(f"Недостаточно средств")
 
 @dp.message_handler(commands=['delete'])
 async def delete_player(message: types.Message):
