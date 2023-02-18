@@ -73,7 +73,7 @@ async def go(call: types.CallbackQuery):
         rand = r.randint(1, 20)
         if rand <= 10 and 'path' not in loc2.title and 'town' not in loc2.title:
             await call.message.answer(f'Вы встрели в локации {loc2.name} монстра. Приготовтесь к битве')
-            await fight(call.message, await create_monster(loc2))
+            await fight(call.message, await create_monster(loc2), 0)
         else:
             await change_loc(call.message)
     else:
@@ -452,7 +452,7 @@ async def create_player(message: types.Message):
         chars[0],
         chars[1], chars[2],
         chars[3], chars[4], chars[5], chars[6], round(r.random() * 0.2, 2),
-        round(r.random() * 0.8, 2))
+        round(0.5+r.random()*1.5, 2))
     param2 = (
         message.from_user.id, chars[0] + 2, "Пусто", 100, chars[0], "Пусто", "Пусто", "Пусто", "Пусто", "Огненный шар",
         "Быстрая молния", "Низшее исцеление")

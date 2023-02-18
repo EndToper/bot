@@ -20,14 +20,14 @@ async def create_monster(loc):
     elif 95 < rand <= 100:
         monster_num = 2
     monster_ex = basic_enemies[monsters[monster_num]]
-    monster = Enemy(monster_ex.name, round(monster_ex.hp / 1.5) + r.randint(1, round(monster_ex.hp * 1.5)),
+    monster = Enemy(monster_ex.name, round(monster_ex.hp / 1.2) + r.randint(1, round(monster_ex.hp * 1.2)),
                     monster_ex.dex,
                     monster_ex.dam, monster_ex.dam_type, monster_ex.res, monster_ex.drop, monster_ex.xp,
                     monster_ex.boss)
     return monster
 
 
-async def fight(message: types.Message, monster):
+async def fight(message: types.Message, monster, magic_count):
     await Database.create()
     res = await Database().fetchone(f"SELECT hp, max_hp FROM players_stat WHERE telegram_id={message.chat.id}")
     monster_title = ''
@@ -48,7 +48,7 @@ async def fight(message: types.Message, monster):
                 inv.append((elem3))
     for i in range(len(result)):
         keyboard.add(types.InlineKeyboardButton(text=result[i],
-                                                callback_data=f"att_{result[i]}_{number_by_name[monster.name]}_{monster.hp}"))
+                                                callback_data=f"att_{result[i]}_{number_by_name[monster.name]}_{monster.hp}_{magic_count}"))
     await message.answer(text='Выберите способ атаки', reply_markup=keyboard)
 
 
@@ -57,6 +57,7 @@ async def attack(call: types.CallbackQuery):
     attack = call.data.split("_")[1]
     m_name = monsters[int(call.data.split("_")[2])]
     m_hp = call.data.split("_")[3]
+    magic_count = call.data.split("_")[4]
     await call.message.edit_text(f'Вы атакавали, используя {attack}')
     monster = None
     for elem in basic_enemies.values():
@@ -72,7 +73,6 @@ async def attack(call: types.CallbackQuery):
             weapon = elem3
     chars = await Database().fetchone(
         f"SELECT body, dexterity, intellect, wisdom FROM players_stat WHERE telegram_id={call.message.chat.id}")
-    print(chars)
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
     magic_affinity = await Database().fetchone(
         f"SELECT fire, water, electro, element, space FROM players_stat WHERE telegram_id={call.message.chat.id}")
@@ -99,19 +99,22 @@ async def attack(call: types.CallbackQuery):
         damage = damage * 2 if rw <= 125 and pl_class.type == 'warrior' else damage
     elif 'int' in weapon.type_char:
         magic_damage = 0
-        for i in range(weapon.count):
-            intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
-            intel = int(intel) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else int(chars[2])
-            print(intel)
-            magic_damage += r.randint(1, intel)
-            print(magic_damage)
-        for elem in weapon.damage_type:
-            magic_damage = magic_damage * (bonus[elem]
-                                           + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
-                                           + (0.1 if pl_class.type == 'mage' else 0)
-                                           + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else 0)
-                                           - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or weapon.damage_type != ['space','melee'] else 0))
-        damage = magic_damage if 'heal' not in weapon.damage_type else 0
+        if magic_count+weapon.cast_cost <= chars[2]:
+            for i in range(weapon.count):
+                intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2])) * (0.5 if chars[2] > 40 else (0.7 if chars[2] > 20 else 1))
+                intel = int(intel) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else int(chars[2])
+                print(intel)
+                magic_damage += r.randint(1, intel)
+                print(magic_damage)
+            for elem in weapon.damage_type:
+                magic_damage = magic_damage * (bonus[elem]
+                                               + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0)
+                                               + (0.1 if pl_class.type == 'mage' else 0)
+                                               + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else 0)
+                                               - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or weapon.damage_type != ['space','melee'] else 0))
+            damage = magic_damage if 'heal' not in weapon.damage_type else 0
+        else:
+            damage = 0
     print(damage)
     damage = damage * (0.5+level/(10+level)) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else damage
     print(damage)
@@ -158,7 +161,7 @@ async def attack(call: types.CallbackQuery):
     hp -= monster_damage
     await call.message.answer(
         f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
-        f' урона {", ".join(damages)}\nВам нанесено {monster_damage} урона {", ".join(mon_damages)}')
+        f' урона {", ".join(damages)}\n{"Вам нанесено "+ str(monster_damage) + " урона " + ", ".join(mon_damages) if monster_damage> 0 else "Вы уклонились от атаки."}')
     if 'heal' in weapon.damage_type:
         hp = hp + 3*round(magic_damage) + 1 if hp + 3*round(magic_damage) + 1 < max_hp else max_hp
         await call.message.answer(f'Вы восстановили {3*round(magic_damage) + 1} хитов')
@@ -168,7 +171,7 @@ async def attack(call: types.CallbackQuery):
     money = await Database().fetchone(f"SELECT money FROM players_inventory WHERE telegram_id={call.message.chat.id}")
     money = int(money[0])
     if hp >= 0 and monster.hp > 0:
-        await fight(call.message, monster)
+        await fight(call.message, monster, magic_count+weapon.cast_cost)
     if monster.hp <= 0:
         await call.message.answer(f'Вы победили монстра "{monster.name}"')
         res = await Database().fetchone(f"SELECT inventory, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
