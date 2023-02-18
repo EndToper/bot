@@ -452,7 +452,7 @@ async def create_player(message: types.Message):
         chars[0],
         chars[1], chars[2],
         chars[3], chars[4], chars[5], chars[6], round(r.random() * 0.2, 2),
-        round(0.5+r.random()*1.5, 2))
+        round(r.random()*0.8, 2))
     param2 = (
         message.from_user.id, chars[0] + 2, "Пусто", 100, chars[0], "Пусто", "Пусто", "Пусто", "Пусто", "Огненный шар",
         "Быстрая молния", "Низшее исцеление")
