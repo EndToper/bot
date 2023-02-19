@@ -377,7 +377,8 @@ async def eq(call: types.CallbackQuery):
     inv = inv[0].split("/")
     keyboard = types.InlineKeyboardMarkup()
     for i in range(len(inv)):
-        keyboard.add(types.InlineKeyboardButton(text=f'{inv[i]}',
+        if inv[i] in slots_to_massive[call.data.split("-")[1]]:
+            keyboard.add(types.InlineKeyboardButton(text=f'{inv[i]}',
                                                     callback_data=f"eq2-{call.data.split('-')[1]}-{i}"))
     await call.message.edit_text(f'Выбранный слот - {" ".join(call.data.split("-")[1].split("_"))}',reply_markup=keyboard)
 
@@ -411,7 +412,7 @@ async def equiped(call: types.CallbackQuery):
             await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?, max_hp = ?"
                                                  f" WHERE telegram_id = ?",
                                              parameters=(hp, 5 * body + armor.defence, call.message.chat.id))
-        await call.message.edit_text(f"Слот {call.data.split('-')[1]} был изменен на {equipment}")
+        await call.message.edit_text(f"Слот {' '.join(call.data.split('-')[1].split('_'))} был изменен на {equipment}")
 
 
 
