@@ -59,7 +59,7 @@ async def get_money(money):
     return f'{gold} золотых, {silver} серебряных, {bronze} медяков'
 
 
-async def perfor_enhanc(chars, rint, count, call, hp, max_hp, exp, level):
+async def perfor_enhanc(chars, rint, count, call, hp, max_hp):
     chars[rint] += count
     inv_chars = await Database().fetchone(
         f"SELECT last_body, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
@@ -73,9 +73,9 @@ async def perfor_enhanc(chars, rint, count, call, hp, max_hp, exp, level):
         sql=f"UPDATE players_stat SET body = ?, dexterity = ?, intellect = ?, wisdom = ?"
             f" WHERE telegram_id = ?",
         parameters=(chars[0], chars[1], chars[2], chars[3], call.message.chat.id))
-    await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?, hp = ?, max_hp = ?"
+    await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?, max_hp = ?"
                                          f" WHERE telegram_id = ?",
-                                     parameters=(level, exp, hp + (chars[0] - last_body) * 5,
+                                     parameters=(hp + (chars[0] - last_body) * 5,
                                                  max_hp + (chars[0] - last_body) * 5, call.message.chat.id))
     await call.message.answer(
         f'Вы повысили уровень.\nХарактеристика {["Телосложение", "Ловкость", "Интеллект", "Харизма"][rint]} увеличена на {count}')

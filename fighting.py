@@ -206,8 +206,11 @@ async def attack(call: types.CallbackQuery):
                 level += 1
                 rint = r.randint(0, 3)
                 count = r.randint(1, 3)
+                await Database().exec_and_commit(sql=f"UPDATE players_stat SET level = ?, exp = ?"
+                                                     f" WHERE telegram_id = ?",
+                                                 parameters=(level, exp, call.message.chat.id))
                 if level % 5 != 0:
-                    await perfor_enhanc(chars,rint,count,call,hp,max_hp,exp,level)
+                    await perfor_enhanc(chars,rint,count,call,hp,max_hp)
                 else:
                     keyboard = types.InlineKeyboardMarkup()
                     keyboard.add(types.InlineKeyboardButton(text=f'Телосложение',

@@ -40,12 +40,10 @@ async def choose_char(call: types.CallbackQuery):
     chars = [int(chars[0]), int(chars[1]), int(chars[2]), int(chars[3])]
     count = 3
     stats = await Database().fetchone(
-        f"SELECT level, hp, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
-    level = int(stats[0])
+        f"SELECT hp, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
     hp = int(stats[1])
     max_hp = int(stats[2])
-    exp = int(call.data.split("_")[3])
-    await perfor_enhanc(chars, rint, count, call, hp, max_hp, exp, level+1)
+    await perfor_enhanc(chars, rint, count, call, hp, max_hp)
     await call.message.edit_text(f"""Вы повысили {'Телосложение' if rint == 0 else ('Ловкость' if rint == 1 else ('Интеллект' if rint == 2 else "Мудрость/харизма"))} на 3""")
 
 
