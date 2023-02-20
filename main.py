@@ -66,6 +66,7 @@ async def info_call(call: types.CallbackQuery):
     name = info_dict[direct][i]
     await call.message.edit_text(f"{name if direct != 'mobs' else basic_enemies[name].name}")
     await call.message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{direct}/{name}.png"))
+    mess = texts.descriptions(info_dict,direct)
     await call.message.answer('-')
 
 @dp.callback_query_handler(text_startswith="att_")
