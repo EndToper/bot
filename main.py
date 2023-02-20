@@ -66,8 +66,11 @@ async def info_call(call: types.CallbackQuery):
     name = info_dict[direct][i]
     await call.message.edit_text(f"{name if direct != 'mobs' else basic_enemies[name].name}")
     await call.message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{direct}/{name}.png"))
-    mess = texts.descriptions(info_dict,direct)
-    await call.message.answer('-')
+    await Database.create()
+    chars = await Database().fetchone(
+        f"SELECT intellect, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    mess = await texts.descriptions(info_dict,direct,name,chars[0],chars[1])
+    await call.message.answer(mess)
 
 @dp.callback_query_handler(text_startswith="att_")
 async def attack(call: types.CallbackQuery):
@@ -479,7 +482,7 @@ async def profile(message: types.Message):
                             "(напишите /start или /go)")
     else:
         await message.reply(
-            f"Приключенченское имя: {res[2]}\nКласс: {classes_by_name[res[4]].name}\nХиты здоровья:  {res[5]}/{res[6]}\n"
+            f"Приключенченское имя: {res[2]}\nКласс: {classes_by_name[res[4]].name}\nОчки здоровья:  {res[5]}/{res[6]}\n"
             f"Уровень: {res[7]} ({res[8]}/{(int(res[7]) + 1) * 100} единиц)\n<b>Характеристики</b>:\n"
             f"Телосложение: <b>{res[9]}</b> Ловкость: <b>{res[10]}</b>\n"
             f"Интеллект: <b>{res[11]}</b> Мудрость/харизма: <b>{res[12]}</b>\n<b>Родство с магией</b>:\n"
