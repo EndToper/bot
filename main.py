@@ -11,7 +11,8 @@ from magic import spell
 from map import locations, paths_level
 from equip import armors, weapons, all_equip
 from auxiliary import change_loc, get_money, perfor_enhanc, classes_by_name, available_slots, \
-    slots_to_massive, slots_name_to_column, available_magic_slots, number_by_name
+    slots_to_massive, slots_name_to_column, available_magic_slots, number_by_name, all_weapon_names,\
+    all_armor_names, all_jewelery_names
 from fighting import create_monster, attack as att2, fight
 from classes import drop_cost
 from collections import Counter
@@ -24,8 +25,48 @@ import texts
 bot = Bot(token=os.environ.get("TOKEN"))
 dp = Dispatcher(bot)
 
+info_dict = {'weapons':[item for item in all_weapon_names if item != 'Пусто'],'armors':
+    [item for item in all_armor_names if item != 'Пусто']+[item for item in all_jewelery_names if item != 'Пусто'],
+             'spells':[item.name for item in spell],'mobs':[item for item in basic_enemies.keys()]}
+print(info_dict['spells'])
 
 
+@dp.message_handler(commands=['info'])
+async def info(message: types.Message):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text="Оружие", callback_data="info_weapons_0"))
+    keyboard.add(types.InlineKeyboardButton(text="Броня и украшения", callback_data="info_armors_0"))
+    keyboard.add(types.InlineKeyboardButton(text="Магия", callback_data="info_spells_0"))
+    keyboard.add(types.InlineKeyboardButton(text="Монстры", callback_data="info_mobs_0"))
+    await message.answer('О чем хотите узнать?', reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="info_")
+async def info_call(call: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    page = int(call.data.split("_")[2])
+    direct = call.data.split("_")[1]
+    if 5 * page + 5 < len(info_dict[direct]):
+        keyboard.add(types.InlineKeyboardButton(text=f'Следующая страница ->',
+                                            callback_data=f"info_{direct}_{page+1}"))
+    from_num = 5*page if 5*page < len(info_dict[direct]) else len(info_dict[direct])
+    to_num = 5*page+5 if 5*page+5 < len(info_dict[direct]) else len(info_dict[direct])
+    print(from_num,to_num)
+    for i in range(from_num,to_num):
+        keyboard.add(types.InlineKeyboardButton(text=f'''{info_dict[direct][i] if direct != 'mobs' else basic_enemies[info_dict[direct][i]].name}'''
+                                                     , callback_data=f"getinfo_{direct}_{i}"))
+    if page > 0:
+        keyboard.add(types.InlineKeyboardButton(text=f'<- Предыдущая страница',
+                                            callback_data=f"info_{direct}_{page-1}"))
+    await call.message.edit_text(f"Что хотите узнать?",reply_markup=keyboard)
+
+@dp.callback_query_handler(text_startswith="getinfo_")
+async def info_call(call: types.CallbackQuery):
+    i = int(call.data.split("_")[2])
+    direct = call.data.split("_")[1]
+    name = info_dict[direct][i]
+    await call.message.edit_text(f"{name if direct != 'mobs' else basic_enemies[name].name}")
+    await call.message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{direct}/{name}.png"))
+    await call.message.answer('-')
 
 @dp.callback_query_handler(text_startswith="att_")
 async def attack(call: types.CallbackQuery):
@@ -105,9 +146,10 @@ async def shop(call: types.CallbackQuery):
                                             callback_data=f"shopb_{page+1}"))
     from_num = 5*page if 5*page < len(all_availabe_equip) else len(all_availabe_equip)
     to_num = 5*page+5 if 5*page+5 < len(all_availabe_equip) else len(all_availabe_equip)
+    print(from_num,to_num)
     for i in range(from_num,to_num):
         keyboard.add(types.InlineKeyboardButton(text=f'{all_availabe_equip[i].name}, Стоимость: {all_availabe_equip[i].cost} медяков'
-                                                     , callback_data=f"buy_{all_availabe_equip[i].name}"))
+                                                     , callback_data=f"buy_{i}"))
     if page > 0:
         keyboard.add(types.InlineKeyboardButton(text=f'<- Предыдущая страница',
                                             callback_data=f"shopb_{page-1}"))
@@ -194,7 +236,13 @@ async def sold(call: types.CallbackQuery):
 @dp.callback_query_handler(text_startswith="buy")
 async def buy(call: types.CallbackQuery):
     item = all_equip[0]
-    item2 = call.data.split("_")[1]
+    await Database.create()
+    level = await Database().fetchone(
+        f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = int(level[0])
+    all_availabe_equip = [item if item.level <= level and item.cost > 0 else None for item in all_equip]
+    all_availabe_equip = [item for item in all_availabe_equip if item is not None]
+    item2 = all_availabe_equip[int(call.data.split("_")[1])].name
     await Database.create()
     inv = await Database().fetchone(f"SELECT money,inventory,inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
     prof = await Database().fetchone(f"SELECT class FROM players_stat WHERE telegram_id={call.message.chat.id}")
@@ -209,6 +257,7 @@ async def buy(call: types.CallbackQuery):
             print(item)
     needs_count = Counter(item.req)
     inv_count = Counter(invent)
+    print(invent, item.req)
     if item.cost < money and (len([True for elem in needs_count.keys() if needs_count[elem] <= inv_count[elem]]) == len(needs_count)
                               or item.req is None) and (item.level <= 10 if pl_class.type != 'warrior'
     and pl_class.type != 'archer' else True) and size+1 <= max_size:
@@ -377,7 +426,7 @@ async def eq(call: types.CallbackQuery):
     inv = inv[0].split("/")
     keyboard = types.InlineKeyboardMarkup()
     for i in range(len(inv)):
-        if inv[i] in slots_to_massive[call.data.split("-")[1]]:
+        if inv[i] in slots_to_massive[slots_name_to_column[call.data.split("-")[1]]]:
             keyboard.add(types.InlineKeyboardButton(text=f'{inv[i]}',
                                                     callback_data=f"eq2-{call.data.split('-')[1]}-{i}"))
     await call.message.edit_text(f'Выбранный слот - {" ".join(call.data.split("-")[1].split("_"))}',reply_markup=keyboard)

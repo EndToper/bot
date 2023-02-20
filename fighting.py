@@ -34,7 +34,7 @@ async def fight(message: types.Message, monster, magic_count):
     for key in basic_enemies.keys():
         if monster.name == basic_enemies[key].name:
             monster_title = key
-    await message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{monster_title}.png"),caption=f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}\nУсталость: {magic_count}/{res[2]}")
+    await message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/mobs/{monster_title}.png"),caption=f"Ваш противник - {monster.name}\nХиты здоровья: {monster.hp}\nВаши хиты: {res[0]}/{res[1]}\nУсталость: {magic_count}/{res[2]}")
     result = await Database().fetchone(
         f"SELECT equip_weapon, equip_weapon2, magic_spell1, magic_spell2, magic_spell3 FROM players_inventory WHERE telegram_id={message.chat.id}")
     keyboard = types.InlineKeyboardMarkup()
@@ -110,7 +110,7 @@ async def attack(call: types.CallbackQuery):
                 mod = (bonus[elem] + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0) + (0.1 if pl_class.type == 'mage' else 0) + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space', 'melee'] else 0) - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or elem == 'space' and weapon.damage_type != ['space','melee'] else 0))
                 magic_damage = magic_damage * mod
                 print(mod,bonus[elem])
-            damage = magic_damage if 'heal' not in weapon.damage_type else 0
+            damage = magic_damage if weapon.damage_type != ['heal'] and weapon.damage_type != ['heal','space'] else 0
         else:
             await call.message.edit_text("Вы слишком устали для использования этого заклинания")
             await fight(call.message,monster,magic_count)
@@ -142,7 +142,8 @@ async def attack(call: types.CallbackQuery):
         monster_damage = round(monster_damage)
         damages = []
         for elem in weapon.damage_type:
-            damages.append(name_damage[elem])
+            if elem != 'heal':
+                damages.append(name_damage[elem])
         mon_damages = []
         for elem in monster.dam_type:
             mon_damages.append(name_damage[elem])
