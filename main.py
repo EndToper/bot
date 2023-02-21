@@ -108,7 +108,7 @@ async def go(call: types.CallbackQuery):
         if elem.title == location2:
             loc2 = elem
     if level >= paths_level[loc2.title]:
-        await call.message.edit_text(await texts.loc_text_2(loc.name, loc2.name))
+        await call.message.edit_text(await texts.loc_text_2(loc.name, loc2.name)) if call.message.text is not None else await call.message.edit_caption(await texts.loc_text_2(loc.name, loc2.name))
         await Database().exec_and_commit(sql="UPDATE players_stat SET location = ? WHERE telegram_id = ?",
                                          parameters=(location2, call.from_user.id))
         await call.answer()

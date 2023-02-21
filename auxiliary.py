@@ -100,7 +100,10 @@ async def change_loc(message: types.Message):
     for i in range(len(loc_obj.paths)):
         keyboard.add(types.InlineKeyboardButton(text=loc_obj.paths_name[i], callback_data=f"go_{loc_obj.paths[i]}"))
     text_loc = await texts.loc_text(loc_obj.name)
-    await message.answer(text_loc, reply_markup=keyboard)
+    if "path" not in loc_obj.title:
+        await message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/locations/{loc_obj.title}.png"),caption=text_loc, reply_markup=keyboard)
+    else:
+        await message.answer(text_loc, reply_markup=keyboard)
 
 
 
