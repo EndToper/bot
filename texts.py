@@ -55,11 +55,11 @@ async def descriptions(info_dict,key,name,intel,max_hp,level):
                 mess += ('Урон(средние значения без модификаторов): ' if 'heal' not in weapon.damage_type else ('Восстановление: ' if weapon.damage_type == ['heal'] or weapon.damage_type == ['space','heal'] else 'Восстановление/Урон(средние значения без модификаторов): ')) + f'{round(weapon.count*weapon.dice*0.45) if key == "weapons" else round(weapon.count*intel*0.45)} - {round(weapon.count*weapon.dice*0.55)if key == "weapons" else round(weapon.count*intel*0.55)}\n' +\
                         f'Тип урона(влияет на модификатор атаки): {", ".join(weapon_dam_type)}\n' + \
                         ("Уменьшение ловкости в " + str(weapon.nerf_dex) + " раз\n" if key == "weapons" and weapon.nerf_dex > 1 else ("Увеличение ловкости в " + str(round(1/weapon.nerf_dex)) + " раз\n" if key == "weapons" and weapon.nerf_dex > 1 else "")) + \
-                        f'Ограничение по уровню: {weapon.level if weapon.level > 0 else "нет"}\n' +\
+                        f'Ограничение по уровню: {str(weapon.level) if 0 < weapon.level <= 10 else (str(weapon.level) + ", специализированная магия(только для магов)" if weapon.level > 10 and key == "spells" else (str(weapon.level) + ", специализированная оружие лучников и воинов" if weapon.level > 10 and key == "weapons" else"нет"))}\n' +\
                         f'Утомление: {weapon.cast_cost if weapon.cast_cost > 0 else "нет"}'
         elif key == 'armors':
                 armor = [item for item in armors + jewelleries if item.name == name][0]
-                mess = f'''{'Защита: +' + str(armor.defence) + ' очков здоровья' if armor.name in all_armor_names else ('Уменьшение урона определенного вида(в количество раз): ' + armor.defence)}'''
+                mess = 'Защита: +' + str(armor.defence) + ' очков здоровья\nОграничение по уровню:' + ('нет' if armor.level == 0 else (str(armor.level) if armor.level <= 10 else str(armor.level) + ', специализированная броня для воинов и лучников')) if armor.name in all_armor_names else ('Уменьшение урона определенного вида(в количество раз): ' + armor.defence)
         elif key == 'mobs':
                 monster = basic_enemies[name]
                 monster_dam_type = [dam_type[item] for item in monster.dam_type]
