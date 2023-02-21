@@ -9,7 +9,7 @@ from equip import weapons
 
 
 
-async def create_monster(loc):
+async def create_monster(loc,call):
     monsters = monsters_from_loc[loc.name]
     rand = r.randint(1, 100)
     monster_num = 0
@@ -20,7 +20,10 @@ async def create_monster(loc):
     elif 95 < rand <= 100:
         monster_num = 2
     monster_ex = basic_enemies[monsters[monster_num]]
-    monster = Enemy(monster_ex.name, round(monster_ex.hp / 1.2) + r.randint(1, round(monster_ex.hp * 1.2)),
+    level = await Database().fetchone(
+        f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    level = level[0]
+    monster = Enemy(monster_ex.name, round(monster_ex.hp / 1.2 * (level/(5*monster_ex.dex) if level/(5*monster_ex.dex) > 1 else 1)) + r.randint(1, round(monster_ex.hp * 1.2 * (level/(5*monster_ex.dex) if level/(5*monster_ex.dex) > 1 else 1))),
                     monster_ex.dex,
                     monster_ex.dam, monster_ex.dam_type, monster_ex.res, monster_ex.drop, monster_ex.xp,
                     monster_ex.boss)
@@ -139,7 +142,7 @@ async def attack(call: types.CallbackQuery):
                 monster_damage += monster.dex/monster.res['poison']
             elif elem == 'curse':
                 monster_damage += round(monster.dex / 100 * max_hp)
-        monster_damage = round(monster_damage)
+        monster_damage = round(monster_damage*(level/(2*monster.dex) if level/(2*monster.dex) > 1 else 1))
         damages = []
         for elem in weapon.damage_type:
             if elem != 'heal':

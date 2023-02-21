@@ -67,8 +67,8 @@ async def info_call(call: types.CallbackQuery):
     await call.message.answer_photo(protect_content=True,photo=types.InputFile(f"./assets/{direct}/{name}.png"))
     await Database.create()
     chars = await Database().fetchone(
-        f"SELECT intellect, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
-    mess = await texts.descriptions(info_dict,direct,name,chars[0],chars[1])
+        f"SELECT intellect, max_hp, level FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    mess = await texts.descriptions(info_dict,direct,name,chars[0],chars[1],chars[2])
     await call.message.answer(mess)
 
 @dp.callback_query_handler(text_startswith="att_")
@@ -115,7 +115,7 @@ async def go(call: types.CallbackQuery):
         rand = r.randint(1, 20)
         if rand <= 10 and 'path' not in loc2.title and 'town' not in loc2.title:
             await call.message.answer(f'Вы встрели в локации {loc2.name} монстра. Приготовтесь к битве')
-            await fight(call.message, await create_monster(loc2), 0)
+            await fight(call.message, await create_monster(loc2,call), 0)
         else:
             await change_loc(call.message)
     else:

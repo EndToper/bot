@@ -44,7 +44,7 @@ from magic import spell
 from equip import armors, weapons, jewelleries, all_armor_names
 from classes import  basic_enemies
 
-async def descriptions(info_dict,key,name,intel,max_hp):
+async def descriptions(info_dict,key,name,intel,max_hp,level):
         mess = ''
         dam_type = name_damage = {'fire': 'Огонь', 'phys': 'Физический урон', 'water': 'Вода', 'ice': 'Лед', 'electro': 'Молния',
                'space': 'Пространство', 'curse': 'Проклятье', 'poison': 'Яд', 'heal': '', 'melee': ''}
@@ -72,7 +72,9 @@ async def descriptions(info_dict,key,name,intel,max_hp):
                                 monster_damage += monster.dex / monster.res['poison']
                         elif elem == 'curse':
                                 monster_damage += round(monster.dex / 100 * max_hp)
-                mess = f'''Очки здоровья: {round(monster.hp / 1.2)+1} - {round(monster.hp / 1.2)+round(monster.hp / 1.2)}
+                monster_damage = round(
+                        monster_damage * (level / (2 * monster.dex) if level / (2 * monster.dex) > 1 else 1))
+                mess = f'''Очки здоровья: {round(monster.hp / 1.2 * (level/(5*monster.dex) if level/(5*monster.dex) > 1 else 1))+1} - {round(monster.hp * 1.2 * (level/(5*monster.dex) if level/(5*monster.dex) > 1 else 1))+round(monster.hp / 1.2)}
 Урон(критические значения): {round(monster_damage*0.1)} - {round(monster_damage)}
 Тип урона(влияет на модификатор атаки): {", ".join(monster_dam_type)}
 Сопротивления: {', '.join([dam_type[item2] for item2 in [item for item in monster.res.keys() if monster.res[item] > 1] if dam_type[item2] != ''])}
