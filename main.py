@@ -28,7 +28,6 @@ dp = Dispatcher(bot)
 info_dict = {'weapons':[item for item in all_weapon_names if item != 'Пусто'],'armors':
     [item for item in all_armor_names if item != 'Пусто']+[item for item in all_jewelery_names if item != 'Пусто'],
              'spells':[item.name for item in spell],'mobs':[item for item in basic_enemies.keys()]}
-print(info_dict['spells'])
 
 
 @dp.message_handler(commands=['info'])
