@@ -85,8 +85,8 @@ async def choose_char(call: types.CallbackQuery):
     count = 3
     stats = await Database().fetchone(
         f"SELECT hp, max_hp FROM players_stat WHERE telegram_id={call.message.chat.id}")
-    hp = int(stats[1])
-    max_hp = int(stats[2])
+    hp = int(stats[0])
+    max_hp = int(stats[1])
     await perfor_enhanc(chars, rint, count, call, hp, max_hp)
     await call.message.edit_text(f"""Вы повысили {'Телосложение' if rint == 0 else ('Ловкость' if rint == 1 else ('Интеллект' if rint == 2 else "Мудрость/харизма"))} на 3""")
 
@@ -128,7 +128,7 @@ async def shop(call: types.CallbackQuery):
                                             callback_data=f"shopb_0"))
     keyboard.add(types.InlineKeyboardButton(text=f'Продажа',
                                             callback_data=f"sell_0"))
-    await call.message.edit_text(f"Вы зашли в магазин. Вы будете продовать или покупать?", reply_markup=keyboard)
+    await call.message.edit_text(f"Вы зашли в магазин. Вы будете продовать или покупать?", reply_markup=keyboard) if call.message.text is not None else await call.message.edit_caption(caption="Вы зашли в магазин. Вы будете продовать или покупать?", reply_markup=keyboard)
 
 @dp.callback_query_handler(text_startswith="shopb")
 async def shop(call: types.CallbackQuery):
@@ -139,9 +139,11 @@ async def shop(call: types.CallbackQuery):
     page = int(call.data.split("_")[1])
     all_availabe_equip = [item if item.level <= level and item.cost > 0 else None for item in all_equip]
     all_availabe_equip = [item for item in all_availabe_equip if item is not None]
+    location = await Database().fetchone(f"SELECT location FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    location = location[0]
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text=f'Выйти',
-                                            callback_data=f"go_town"))
+                                            callback_data=f"go_{location}"))
     keyboard.add(types.InlineKeyboardButton(text=f'Продажа',
                                             callback_data=f"sell_0"))
     if 5 * page + 5 < len(all_availabe_equip):
@@ -156,7 +158,7 @@ async def shop(call: types.CallbackQuery):
     if page > 0:
         keyboard.add(types.InlineKeyboardButton(text=f'<- Предыдущая страница',
                                             callback_data=f"shopb_{page-1}"))
-    await call.message.edit_text(f"Чего изволите купить?",reply_markup=keyboard)
+    await call.message.edit_text(f"Чего изволите купить?",reply_markup=keyboard) if call.message.text is not None else await call.message.edit_caption(caption=f"Чего изволите купить?",reply_markup=keyboard)
 
 
 @dp.callback_query_handler(text_startswith="sell")
@@ -166,9 +168,11 @@ async def sell(call: types.CallbackQuery):
         f"SELECT inventory FROM players_inventory WHERE telegram_id={call.message.chat.id}")
     inv= inv[0].split("/")
     page = int(call.data.split("_")[1])
+    location = await Database().fetchone(f"SELECT location FROM players_stat WHERE telegram_id={call.message.chat.id}")
+    location = location[0]
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text=f'Выйти',
-                                            callback_data=f"go_town"))
+                                            callback_data=f"go_{location}"))
     keyboard.add(types.InlineKeyboardButton(text=f'Ассортимент',
                                             callback_data=f"shopb_0"))
     if 5 * page + 5 < len(inv):
@@ -182,7 +186,7 @@ async def sell(call: types.CallbackQuery):
     if page > 0:
         keyboard.add(types.InlineKeyboardButton(text=f'<- Предыдущая страница',
                                             callback_data=f"sell_{page-1}"))
-    await call.message.edit_text(f"Что хотите продать",reply_markup=keyboard)
+    await call.message.edit_text(f"Что хотите продать",reply_markup=keyboard) if call.message.text is not None else await call.message.edit_caption(f"Что хотите продать",reply_markup=keyboard)
 
 
 @dp.callback_query_handler(text_startswith="itemsell")
@@ -200,7 +204,7 @@ async def itemsell(call: types.CallbackQuery):
                                             callback_data=f"""sold_{int(call.data.split("_")[1])}"""))
     keyboard.add(types.InlineKeyboardButton(text=f'Нет',
                                             callback_data=f"""sell_0"""))
-    await call.message.edit_text(f"Уверены, что хотите продать {item} за {item_cost} медяков", reply_markup=keyboard)
+    await call.message.edit_text(f"Уверены, что хотите продать {item} за {item_cost} медяков", reply_markup=keyboard) if call.message.text is not None else await call.message.edit_caption(f"Уверены, что хотите продать {item} за {item_cost} медяков", reply_markup=keyboard)
     print(item_cost)
 
 
@@ -234,7 +238,7 @@ async def sold(call: types.CallbackQuery):
                                             callback_data=f"shopb_0"))
     keyboard.add(types.InlineKeyboardButton(text=f'Продажа',
                                             callback_data=f"sell_0"))
-    await call.message.edit_text(f"Вы продали {item} за {item_cost} медяков", reply_markup=keyboard)
+    await call.message.edit_text(f"Вы продали {item} за {item_cost} медяков", reply_markup=keyboard) if call.message.text is not None else await call.message.edit_caption(f"Вы продали {item} за {item_cost} медяков", reply_markup=keyboard)
 
 @dp.callback_query_handler(text_startswith="buy")
 async def buy(call: types.CallbackQuery):

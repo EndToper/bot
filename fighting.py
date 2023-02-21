@@ -51,14 +51,16 @@ async def fight(message: types.Message, monster, magic_count):
                 inv.append((elem3))
     for i in range(len(result)):
         keyboard.add(types.InlineKeyboardButton(text=result[i],
-                                                callback_data=f"att_{result[i]}_{number_by_name[monster.name]}_{monster.hp}_{magic_count}"))
+                                                callback_data=f"att_{i}_{number_by_name[monster.name]}_{monster.hp}_{magic_count}"))
     await message.answer(text='Выберите способ атаки', reply_markup=keyboard)
 
 
 async def attack(call: types.CallbackQuery):
     await Database.create()
     print(call.data)
-    attack = call.data.split("_")[1]
+    result = await Database().fetchone(
+        f"SELECT equip_weapon, equip_weapon2, magic_spell1, magic_spell2, magic_spell3 FROM players_inventory WHERE telegram_id={call.message.chat.id}")
+    attack = result[int(call.data.split("_")[1])]
     m_name = monsters[int(call.data.split("_")[2])]
     m_hp = call.data.split("_")[3]
     magic_count = int(call.data.split("_")[4])
@@ -98,9 +100,13 @@ async def attack(call: types.CallbackQuery):
         for i in range(2 * weapon.count if r.randint(1, 10) == 1 and pl_class.type == 'archer' else weapon.count):
             weapon_damage += r.randint(1, weapon.dice)
         damage = weapon_damage
+        print(damage)
         damage += chars[0] / 1.5 if 'bod' in weapon.type_char and pl_class.type == 'warrior' else chars[0] / 2 if 'bod' in weapon.type_char else chars[1]/ 1.5 if 'dex' in weapon.type_char and pl_class.type == 'archer' else chars[1] / 2
         rw = r.randint(1, 1000)
         damage = damage * 2 if rw <= 125 and pl_class.type == 'warrior' else damage
+        if magic_count + weapon.cast_cost > chars[2] and ('bod' in weapon.type_char or 'dex' in weapon.type_char):
+            damage = round(damage*0.4) if weapon.count < 15 and weapon.dice < 50 else round(damage*0.1) if weapon.count < 30 and weapon.dice < 50 else round(damage*0.01)
+        print(damage, '- понерфенный урон')
     elif 'int' in weapon.type_char:
         magic_damage = 0
         if magic_count+weapon.cast_cost <= chars[2]:
@@ -108,7 +114,6 @@ async def attack(call: types.CallbackQuery):
                 intel = round((chars[2]*0.5) if chars[2] > 40 else (round(chars[2]*0.7) if chars[2] > 20 else chars[2]))
                 intel = int(intel) if weapon.damage_type == ['space'] or weapon.damage_type == ['space','melee'] else int(chars[2])
                 magic_damage += r.randint(1, chars[2])
-                print(magic_damage)
             for elem in weapon.damage_type:
                 mod = (bonus[elem] + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0) + (0.1 if pl_class.type == 'mage' else 0) + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space', 'melee'] else 0) - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or elem == 'space' and weapon.damage_type != ['space','melee'] else 0))
                 magic_damage = magic_damage * mod
@@ -175,7 +180,8 @@ async def attack(call: types.CallbackQuery):
         money = await Database().fetchone(f"SELECT money FROM players_inventory WHERE telegram_id={call.message.chat.id}")
         money = int(money[0])
         if hp >= 0 and monster.hp > 0:
-            await fight(call.message, monster, magic_count+weapon.cast_cost)
+            print("mess2")
+            await fight(call.message, monster, (magic_count+weapon.cast_cost if (magic_count + weapon.cast_cost < chars[2] and ('bod' in weapon.type_char or 'dex' in weapon.type_char)) or 'int' in weapon.type_char else magic_count))
         if monster.hp <= 0:
             await call.message.answer(f'Вы победили монстра "{monster.name}"')
             res = await Database().fetchone(f"SELECT inventory, inventory_size FROM players_inventory WHERE telegram_id={call.message.chat.id}")
@@ -249,3 +255,7 @@ async def attack(call: types.CallbackQuery):
                                                  parameters=(call.message.chat.id,))
                 await Database().exec_and_commit(sql=f"DELETE FROM players_inventory WHERE telegram_id = ?",
                                                  parameters=(call.message.chat.id,))
+    else:
+        if "int" not in weapon.type_char:
+            await call.message.edit_text("Вы слишком устали для использования этого магического оружия")
+            await fight(call.message, monster, magic_count)

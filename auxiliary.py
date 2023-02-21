@@ -15,7 +15,8 @@ monsters_from_loc = {'Лес': ['goblin', 'wolf', 'leshii'], 'Перелески
                      "Темный лес":['naga','shadow','raven-mockingbird'],
                      "Скалы":['stonlem','salamandra','anchimayen'],
                      "Инврисовый лес":['dryad','envrisent','elder-envrisent'],
-                     "Темный инврисовый лес":['raven-mockingbird','distortion-envrisent','used-distortion-envrisent']}
+                     "Темный инврисовый лес":['raven-mockingbird','distortion-envrisent','used-distortion-envrisent'],
+                     "Портал":['raven-mockingbird','distortion-envrisent','fused-distortion-envrisent']}
 
 monsters = ['Гоблин','Волк','Леший','Травяной паразит','Ядовитая слизь','Дух цветов',
             'Накки','Морге́на','Русалка','Мандрагора','Король духов цветов',
