@@ -118,6 +118,7 @@ async def attack(call: types.CallbackQuery):
                 mod = (bonus[elem] + (element if elem in ['fire', 'electro', 'water', 'ice'] else 0) + (0.1 if pl_class.type == 'mage' else 0) + (0.4 if weapon.damage_type == ['space'] or weapon.damage_type == ['space', 'melee'] else 0) - (0.1 if elem == 'space' and weapon.damage_type != ['space'] or elem == 'space' and weapon.damage_type != ['space','melee'] else 0))
                 magic_damage = magic_damage * mod
                 print(mod,bonus[elem])
+            print(magic_damage,'маг урон')
             damage = magic_damage if weapon.damage_type != ['heal'] and weapon.damage_type != ['heal','space'] else 0
         else:
             await call.message.edit_text("Вы слишком устали для использования этого заклинания")
@@ -129,16 +130,21 @@ async def attack(call: types.CallbackQuery):
         resistance = 1
         curse_dam = 0
         for dt in weapon.damage_type:
-            resistance = resistance * monster.res[dt]
+            resistance = resistance * monster.res[dt] if dt != 'heal' else 1 if weapon.damage_type != ['heal'] and weapon.damage_type != ['space','heal'] else 0
+            print(monster.res[dt], resistance)
         damage = round(damage / resistance) if resistance > 0 else 0
+        print(damage,'урон с сопротивлением')
         monster.hp -= damage
         if 'poison' in weapon.damage_type:
             monster.hp -= chars[3]
+            damage += chars[3]
         if 'curse' in weapon.damage_type:
             curse_dam = chars[3] / 100 * max_hp if chars[3] < 75 else 0.75 * max_hp
             curse_dam = curse_dam if pl_class.type == 'warlock' else curse_dam/10
             curse_dam = round(curse_dam)
             monster.hp -= curse_dam
+            damage += curse_dam
+        print(damage,"урон + яд + проклятья")
         monster_damage = r.randint(1, monster.dam)
         for elem in monster.dam_type:
             if elem in ['fire', 'electro', 'ice', 'water', 'phys']:
@@ -169,7 +175,7 @@ async def attack(call: types.CallbackQuery):
             monster_damage = 0
         hp -= monster_damage
         await call.message.answer(
-            f'Вы нанесли монстру {damage + (chars[3] if "poison" in weapon.damage_type else 0) + curse_dam}'
+            f'Вы нанесли монстру {damage}'
             f' урона {", ".join(damages)}\n{"Вам нанесено "+ str(monster_damage) + " урона " + ", ".join(mon_damages) if monster_damage> 0 else "Вы уклонились от атаки."}')
         if 'heal' in weapon.damage_type:
             await call.message.answer(f'Вы восстановили {round(magic_damage/1.2) + 1 if hp + round(magic_damage/1.2) + 1 < max_hp else max_hp - hp} хитов')
