@@ -52,7 +52,7 @@ async def descriptions(info_dict,key,name,intel,max_hp):
                 weapon = [item for item in spell + weapons if item.name == name][0]
                 weapon_dam_type = [dam_type[item] for item in weapon.damage_type]
                 weapon_dam_type = [item for item in weapon_dam_type if item != '']
-                mess += 'Урон(средние значения без модификаторов): ' if 'heal' not in weapon.damage_type else ('Восстановление: ' if weapon.damage_type == ['heal'] or weapon.damage_type == ['space','heal'] else 'Восстановление/Урон(средние значения без модификаторов): ') + f'{round(weapon.count*weapon.dice*0.45) if key == "weapons" else round(weapon.count*intel*0.45)} - {round(weapon.count*weapon.dice*0.55)if key == "weapons" else round(weapon.count*intel*0.55)}\n' +\
+                mess += ('Урон(средние значения без модификаторов): ' if 'heal' not in weapon.damage_type else ('Восстановление: ' if weapon.damage_type == ['heal'] or weapon.damage_type == ['space','heal'] else 'Восстановление/Урон(средние значения без модификаторов): ')) + f'{round(weapon.count*weapon.dice*0.45) if key == "weapons" else round(weapon.count*intel*0.45)} - {round(weapon.count*weapon.dice*0.55)if key == "weapons" else round(weapon.count*intel*0.55)}\n' +\
                         f'Тип урона(влияет на модификатор атаки): {", ".join(weapon_dam_type)}\n' + \
                         ("Уменьшение ловкости в " + str(weapon.nerf_dex) + " раз\n" if key == "weapons" and weapon.nerf_dex > 1 else ("Увеличение ловкости в " + str(round(1/weapon.nerf_dex)) + " раз\n" if key == "weapons" and weapon.nerf_dex > 1 else "")) + \
                         f'Ограничение по уровню: {weapon.level if weapon.level > 0 else "нет"}\n' +\
