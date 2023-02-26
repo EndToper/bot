@@ -44,10 +44,10 @@ from magic import spell
 from equip import armors, weapons, jewelleries, all_armor_names
 from classes import  basic_enemies
 
-async def descriptions(info_dict,key,name,intel,max_hp,level):
+async def descriptions(key,name,intel,max_hp,level):
         mess = ''
-        dam_type = name_damage = {'fire': 'Огонь', 'phys': 'Физический урон', 'water': 'Вода', 'ice': 'Лед', 'electro': 'Молния',
-               'space': 'Пространство', 'curse': 'Проклятье', 'poison': 'Яд', 'heal': '', 'melee': ''}
+        dam_type = {'fire': 'Огонь', 'phys': 'Физический урон', 'water': 'Вода', 'ice': 'Лед', 'electro': 'Молния',
+               'space': 'Пространство', 'curse': 'Проклятье', 'poison': 'Яд', 'heal': 'Исцеление', 'melee': 'Ближняя атака'}
         if key == 'spells' or key == 'weapons':
                 weapon = [item for item in spell + weapons if item.name == name][0]
                 weapon_dam_type = [dam_type[item] for item in weapon.damage_type]
@@ -59,7 +59,14 @@ async def descriptions(info_dict,key,name,intel,max_hp,level):
                         f'Утомление: {weapon.cast_cost if weapon.cast_cost > 0 else "нет"}'
         elif key == 'armors':
                 armor = [item for item in armors + jewelleries if item.name == name][0]
-                mess = 'Защита: +' + str(armor.defence) + ' очков здоровья\nОграничение по уровню:' + ('нет' if armor.level == 0 else (str(armor.level) if armor.level <= 10 else str(armor.level) + ', специализированная броня для воинов и лучников')) if armor.name in all_armor_names else ('Уменьшение урона определенного вида(в количество раз): ' + armor.defence)
+                if armor.name in all_armor_names:
+                        mess = 'Защита: +' + str(armor.defence) + ' очков здоровья\nОграничение по уровню:' + ('нет' if armor.level == 0 else (str(armor.level) if armor.level <= 10 else str(armor.level) + ', специализированная броня для воинов и лучников'))
+                else:
+                        resis = [item for item in armor.res.keys() if armor.res[item] != 1]
+
+                        str_atack = ',\n'.join(['{name}: {num}'.format(name=dam_type[item], num=armor.res[item]) for item in resis])
+                        mess = f'Модификатор защиты от урона определенного вида:\n{str_atack}\nОграничение по уровню: {armor.level if armor.level > 1 else "нет"}'
+
         elif key == 'mobs':
                 monster = basic_enemies[name]
                 monster_dam_type = [dam_type[item] for item in monster.dam_type]
