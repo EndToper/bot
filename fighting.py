@@ -209,7 +209,7 @@ async def attack(call: types.CallbackQuery):
             recover = round(recover*jewellery.res['heal']) if jewellery.res['heal'] > 1 else recover
             print(recover)
             await call.message.answer(
-                f'Вы восстановили {recover if recover < max_hp else max_hp - hp} хитов')
+                f'Вы восстановили {recover if recover+hp < max_hp else max_hp - hp} хитов')
             hp = hp + recover if hp + recover < max_hp else max_hp
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
