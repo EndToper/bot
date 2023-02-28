@@ -210,7 +210,7 @@ async def attack(call: types.CallbackQuery):
             print(recover)
             await call.message.answer(
                 f'Вы восстановили {recover if recover < max_hp else max_hp - hp} хитов')
-            hp = recover if recover < max_hp else max_hp
+            hp = hp + recover if hp + recover < max_hp else max_hp
         await Database().exec_and_commit(sql=f"UPDATE players_stat SET hp = ?"
                                              f" WHERE telegram_id = ?",
                                          parameters=(hp, call.message.chat.id))
