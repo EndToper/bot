@@ -122,7 +122,13 @@ async def go(call: types.CallbackQuery):
         rand = r.randint(1, 20)
         if rand <= 10 and 'path' not in loc2.title and 'town' not in loc2.title:
             await call.message.answer(f'Вы встрели в локации {loc2.name} монстра. Приготовтесь к битве')
-            await fight(call.message, await create_monster(loc2, call), 0)
+            monster = await create_monster(loc2, call)
+            if monster.type == 'monster':
+                await fight(call.message, monster, 0)
+            elif monster.type == 'boss':
+                await fight(call.message, monster, 0)
+            elif monster.type == 'npc':
+                pass
         else:
             await change_loc(call.message)
     else:

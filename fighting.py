@@ -23,15 +23,11 @@ async def create_monster(loc, call):
         f"SELECT level FROM players_stat WHERE telegram_id={call.message.chat.id}")
     level = level[0]
     monster = Enemy(monster_ex.name, round(
-        monster_ex.hp / 1.2 * (level / (5 * monster_ex.dex) if level / (5 * monster_ex.dex) > 1 else 1)) + r.randint(1,
-                                                                                                                     round(
-                                                                                                                         monster_ex.hp * 1.2 * (
-                                                                                                                             level / (
-                                                                                                                                         5 * monster_ex.dex) if level / (
-                                                                                                                                         5 * monster_ex.dex) > 1 else 1))),
-                    monster_ex.dex,
-                    monster_ex.dam, monster_ex.dam_type, monster_ex.res, monster_ex.drop, monster_ex.xp,
-                    monster_ex.boss)
+        monster_ex.hp / 1.2 * (level / (5 * monster_ex.dex) if level / (5 * monster_ex.dex) > 1 else 1)) +
+        r.randint(1, round(monster_ex.hp * 1.2 * (level / (5 * monster_ex.dex) if level / (5 * monster_ex.dex) > 1 else 1))),
+        monster_ex.dex,
+        monster_ex.dam, monster_ex.dam_type, monster_ex.res, monster_ex.drop, monster_ex.xp,
+        monster_ex.type)
     return monster
 
 
@@ -76,7 +72,7 @@ async def attack(call: types.CallbackQuery):
     for elem in basic_enemies.values():
         if m_name == elem.name:
             monster = Enemy(elem.name, int(m_hp), elem.dex, elem.dam, elem.dam_type, elem.res, elem.drop, elem.xp,
-                            elem.boss)
+                            elem.type)
     weapon = None
     for elem2 in weapons:
         if attack == elem2.name:
